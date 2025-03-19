@@ -5,21 +5,35 @@ import HeaderSection from "../components/Header";
 import { Input, Button } from "antd";
 import { useState } from "react";
 import Link from "next/link";
+import axios from "axios";
 
 export default function SignIn() {
   const router = useRouter();
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
+  const [form, setForm] = useState({ username: "", password: "" });
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("User logged in:", form);
+    setMessage("");
+    setError("");
+
+    try {
+      const response = await axios.post("http://127.0.0.1:8000/api/login/", {
+        username: form.username, // Используем email как username
+        password: form.password,
+      });
+
+      setMessage("Login successful!");
+      setError("");
+    } catch (err) {
+      setError("Login failed. Please check your credentials.");
+      setMessage("");
+    }
   };
 
   return (
@@ -35,10 +49,10 @@ export default function SignIn() {
             <h2 className="text-xl font-semibold text-[#002D62] mb-4">Sign in to your account</h2>
             <form onSubmit={handleSubmit} className="w-full">
               <Input
-                name="email"
-                type="email"
+                name="username"
+                type="text"
                 placeholder="Email"
-                value={form.email}
+                value={form.username}
                 onChange={handleChange}
                 className="mb-4 py-2 border border-gray-300 rounded-md"
               />
@@ -57,6 +71,8 @@ export default function SignIn() {
                 SIGN IN
               </Button>
             </form>
+            {message && <p className="text-green-600 mt-2">{message}</p>}
+            {error && <p className="text-red-500 mt-2">{error}</p>}
           </div>
           {/* Правая часть (Регистрация) */}
           <div className="w-1/2 p-10 bg-[#002D62] text-white flex flex-col items-center justify-center">
