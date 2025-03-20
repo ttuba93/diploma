@@ -28,7 +28,7 @@ export default function DocumentTemplate() {
         {/* Блок документа */}
         <div className="border shadow-lg rounded-lg p-4 bg-gray-100 w-full max-w-4xl mt-10 flex flex-col items-center">
           <iframe 
-            src="/path-to-document.pdf" 
+            src="../sample.pdf" 
             className="w-full h-[600px] border rounded-lg"
             title="Document Preview"
           ></iframe>
