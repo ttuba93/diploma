@@ -40,7 +40,7 @@ export default function StudentProfile() {
   return (
     <Layout className="min-h-screen flex flex-col">
       <HeaderSection />
-      <Content className="flex flex-col items-center justify-center flex-grow bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/images/background.jpg')" }}>
+      <Content className="flex flex-col items-center justify-center flex-grow bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/images/kbtu1.jpg')" }}>
         <Card className="shadow-lg rounded-lg p-6 w-full max-w-md bg-white mt-6">
           <Title level={2} className="text-center text-[#002F6C]">Student Profile</Title>
           {error ? (
