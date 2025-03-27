@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Input, List, Spin, Alert } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import axios from "axios";
+import { useRouter } from "next/navigation"; // Импорт для навигации
 
 interface FAQ {
   id: number;
@@ -17,10 +18,11 @@ export default function SearchSection() {
   const [filteredFaqs, setFilteredFaqs] = useState<FAQ[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter(); // Используем навигацию
 
   useEffect(() => {
     axios
-      .get("http://127.0.0.1:8000/api/faq/?search=")
+      .get("http://127.0.0.1:8000/api/faq/")
       .then((res) => {
         setFaqs(res.data);
         setFilteredFaqs(res.data);
@@ -37,8 +39,10 @@ export default function SearchSection() {
       setFilteredFaqs(faqs);
     } else {
       setFilteredFaqs(
-        faqs.filter((faq) =>
-          faq.question.toLowerCase().includes(searchQuery.toLowerCase())
+        faqs.filter(
+          (faq) =>
+            faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            faq.answer.toLowerCase().includes(searchQuery.toLowerCase()) // Ищем и по ответу
         )
       );
     }
@@ -72,7 +76,10 @@ export default function SearchSection() {
             <List
               dataSource={filteredFaqs}
               renderItem={(faq) => (
-                <List.Item className="cursor-pointer hover:bg-gray-100 transition-all duration-200">
+                <List.Item
+                  className="cursor-pointer hover:bg-gray-100 transition-all duration-200"
+                  onClick={() => router.push(`/faq/${faq.id}`)} // Переход на страницу с вопросом
+                >
                   <strong>{faq.question}</strong>
                 </List.Item>
               )}

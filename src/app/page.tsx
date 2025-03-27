@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Layout, Spin, Alert, Input } from "antd";
+import { Layout, Spin, Alert, Modal } from "antd";
 import HeaderSection from "./components/Header";
+import SearchSection from "./components/SearchSection";
 import { Footer } from "./components/Footer";
 import axios from "axios";
-import SearchSection from "./components/SearchSection";
 
 const { Content } = Layout;
 
@@ -22,6 +22,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedFAQ, setSelectedFAQ] = useState<FAQ | null>(null);
 
   useEffect(() => {
     axios
@@ -42,15 +43,17 @@ export default function Home() {
       ? faqs
       : faqs.filter((faq) => faq.course.toString() === selectedCourse);
 
-  // Фильтрация по поисковому запросу
-  const filteredFaqs = filteredByCourse.filter((faq) =>
-    faq.question.toLowerCase().includes(searchQuery.toLowerCase())
+  // Фильтрация по поисковому запросу (ищет в вопросе и ответе, без учета регистра)
+  const filteredFaqs = filteredByCourse.filter(
+    (faq) =>
+      faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <Layout className="min-h-screen">
       <HeaderSection />
-      <SearchSection/>
+      <SearchSection />
 
       {/* Фильтр категорий */}
       <section className="text-center py-6 border-b">
@@ -83,16 +86,27 @@ export default function Home() {
           filteredFaqs.map((faq) => (
             <div
               key={faq.id}
+              onClick={() => setSelectedFAQ(faq)}
               className="p-4 border rounded-lg my-2 cursor-pointer hover:bg-gray-100 transition-all duration-200"
             >
               <strong>{faq.question}</strong>
-              <p className="text-gray-600">{faq.answer}</p>
+              <p className="text-gray-600 truncate">{faq.answer}</p>
             </div>
           ))
         ) : (
           <p className="text-center text-gray-500">No FAQs found.</p>
         )}
       </Content>
+
+      {/* Модальное окно для отображения полного ответа */}
+      <Modal
+        title={selectedFAQ?.question}
+        open={!!selectedFAQ}
+        onCancel={() => setSelectedFAQ(null)}
+        footer={null}
+      >
+        <p>{selectedFAQ?.answer}</p>
+      </Modal>
 
       <Footer />
     </Layout>
