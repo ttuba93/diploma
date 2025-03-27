@@ -20,7 +20,7 @@ export default function SearchSection() {
 
   useEffect(() => {
     axios
-      .get("http://127.0.0.1:8000/api/faq/")
+      .get("http://127.0.0.1:8000/api/faq/?search=")
       .then((res) => {
         setFaqs(res.data);
         setFilteredFaqs(res.data);
