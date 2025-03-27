@@ -5,6 +5,7 @@ import { Layout, Spin, Alert, Input } from "antd";
 import HeaderSection from "./components/Header";
 import { Footer } from "./components/Footer";
 import axios from "axios";
+import SearchSection from "./components/SearchSection";
 
 const { Content } = Layout;
 
@@ -49,16 +50,7 @@ export default function Home() {
   return (
     <Layout className="min-h-screen">
       <HeaderSection />
-
-      {/* Поле поиска */}
-      <div className="max-w-4xl mx-auto mt-6 px-4">
-        <Input
-          placeholder="Search FAQ..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full py-2 border border-gray-300 rounded-md"
-        />
-      </div>
+      <SearchSection/>
 
       {/* Фильтр категорий */}
       <section className="text-center py-6 border-b">
