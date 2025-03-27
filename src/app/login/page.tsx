@@ -23,13 +23,18 @@ export default function SignIn() {
     setError("");
 
     try {
-      const response = await axios.post("http://127.0.0.1:8000/api/login/", {
-        username: form.username, // Используем email как username
+      const response = await axios.post("http://127.0.0.1:8000/api/token/", {
+        username: form.username,
         password: form.password,
       });
 
+      // Сохраняем токен
+      localStorage.setItem("token", response.data.access);
       setMessage("Login successful!");
       setError("");
+
+      // Перенаправляем пользователя на страницу профиля
+      router.push("/profile");
     } catch (err) {
       setError("Login failed. Please check your credentials.");
       setMessage("");
