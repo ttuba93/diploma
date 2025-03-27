@@ -10,7 +10,7 @@ const { Content } = Layout;
 const { Title, Text } = Typography;
 
 interface Student {
-  id: number;
+  kbtu_id: number;
   first_name: string;
   last_name: string;
   email: string;
@@ -47,7 +47,7 @@ export default function StudentProfile() {
             <Alert message="Error" description={error} type="error" showIcon />
           ) : student ? (
             <div className="text-center">
-              <Text strong>ID:</Text> <Text>{student.id}</Text>
+              <Text strong>ID:</Text> <Text>{student.kbtu_id}</Text>
               <br />
               <Text strong>Name:</Text> <Text>{student.first_name} {student.last_name}</Text>
               <br />
