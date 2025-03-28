@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Layout, Spin, Alert, Modal } from "antd";
+import { Layout, Spin, Alert, Modal, Button, Form, Input, message } from "antd";
 import HeaderSection from "./components/Header";
 import SearchSection from "./components/SearchSection";
 import { Footer } from "./components/Footer";
@@ -23,6 +23,8 @@ export default function Home() {
   const [selectedCourse, setSelectedCourse] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedFAQ, setSelectedFAQ] = useState<FAQ | null>(null);
+  const [isQuestionModalOpen, setIsQuestionModalOpen] = useState<boolean>(false);
+  const [form] = Form.useForm();
 
   useEffect(() => {
     axios
@@ -49,6 +51,24 @@ export default function Home() {
       faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
       faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Отправка нового вопроса на бекенд
+  const handleSubmit = (values: { topic: string; description: string }) => {
+    axios
+      .post("http://127.0.0.1:8000/api/faq-requests/create/", {
+        student: 1, // ID студента (можно передавать через авторизацию)
+        topic: values.topic,
+        description: values.description,
+      })
+      .then(() => {
+        message.success("Ваш вопрос отправлен менеджерам деканата!");
+        setIsQuestionModalOpen(false);
+        form.resetFields();
+      })
+      .catch(() => {
+        message.error("Ошибка при отправке вопроса!");
+      });
+  };
 
   return (
     <Layout className="min-h-screen">
@@ -98,7 +118,18 @@ export default function Home() {
         )}
       </Content>
 
-      {/* Модальное окно для отображения полного ответа */}
+      {/* Кнопка "Задать вопрос" внизу страницы */}
+      <div className="text-center my-6">
+        <Button
+          type="primary"
+          className="bg-blue-900 hover:bg-blue-700"
+          onClick={() => setIsQuestionModalOpen(true)}
+        >
+          Задать свой вопрос
+        </Button>
+      </div>
+
+      {/* Модальное окно для просмотра ответа */}
       <Modal
         title={selectedFAQ?.question}
         open={!!selectedFAQ}
@@ -106,6 +137,34 @@ export default function Home() {
         footer={null}
       >
         <p>{selectedFAQ?.answer}</p>
+      </Modal>
+
+      {/* Модальное окно для отправки нового вопроса */}
+      <Modal
+        title="Задать вопрос деканату"
+        open={isQuestionModalOpen}
+        onCancel={() => setIsQuestionModalOpen(false)}
+        footer={null}
+      >
+        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+          <Form.Item
+            label="Тема"
+            name="topic"
+            rules={[{ required: true, message: "Введите тему вопроса!" }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            label="Описание"
+            name="description"
+            rules={[{ required: true, message: "Введите описание!" }]}
+          >
+            <Input.TextArea rows={4} />
+          </Form.Item>
+          <Button type="primary" htmlType="submit" className="w-full bg-blue-900 hover:bg-blue-700">
+            Отправить вопрос
+          </Button>
+        </Form>
       </Modal>
 
       <Footer />
