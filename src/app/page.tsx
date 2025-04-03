@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Layout, Spin, Alert, Modal, Button, Form, Input, message } from "antd";
+import { Layout, Spin, Alert, Modal, Button, Form, Input, Upload, message } from "antd";
+import { UploadOutlined } from "@ant-design/icons";
 import HeaderSection from "./components/Header";
 import SearchSection from "./components/SearchSection";
 import { Footer } from "./components/Footer";
@@ -161,6 +162,11 @@ export default function Home() {
             rules={[{ required: true, message: "Введите описание!" }]}
           >
             <Input.TextArea rows={4} />
+          </Form.Item>
+          <Form.Item label="Загрузить документ (необязательно)" name="document" valuePropName="fileList" getValueFromEvent={(e) => e.fileList}>
+            <Upload beforeUpload={() => false} maxCount={1}>
+              <Button icon={<UploadOutlined />}>Выберите файл</Button>
+            </Upload>
           </Form.Item>
           <Button type="primary" htmlType="submit" className="w-full bg-blue-900 hover:bg-blue-700">
             Отправить вопрос
