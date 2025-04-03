@@ -31,7 +31,7 @@ export default function DocumentsPage() {
         <Row gutter={[16, 16]} justify="center" style={{ marginTop: "20px" }}>
           {documents.map((doc) => (
             <Col key={doc.id} xs={24} sm={12} md={8}>
-              <Link href={`/samples/${doc.id}`}>
+              <Link href={`/sample/${doc.id}`}>
                 <Card style={{ textAlign: "center", padding: "30px", cursor: "pointer" }}>
                   <h4>{doc.name}</h4>
                 </Card>
