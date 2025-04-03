@@ -97,7 +97,7 @@ export default function Home() {
       </section>
 
       {/* Вопросы и ответы */}
-      <Content className="p-6 max-w-4xl mx-auto">
+      <Content className="p-6 max-w-4xl mx-auto w-full">
         {loading ? (
           <div className="flex justify-center">
             <Spin size="large" />
