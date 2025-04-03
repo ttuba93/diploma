@@ -152,22 +152,23 @@ export default function UserProfile() {
                   <br />
                   <Text strong>Phone:</Text> <Text>{(profile as Student).telephone_number || "N/A"}</Text>
                 </>
-              ) : user?.role === "dean manager" ? (
-                <>
-                  <Text strong>Name:</Text> <Text>{(profile as ManagerProfile).first_name} {(profile as ManagerProfile).last_name}</Text>
-                  <br />
-                  <Text strong>Middle Name:</Text> <Text>{(profile as ManagerProfile).middle_name || "N/A"}</Text>
-                  <br />
-                  <Text strong>Email:</Text> <Text>{(profile as ManagerProfile).email}</Text>
-                  <br />
-                  <Text strong>School:</Text> <Text>{(profile as ManagerProfile).school}</Text>
-                  <br />
-                  <Text strong>Phone:</Text> <Text>{(profile as ManagerProfile).phone_number}</Text>
-                  <br />
-                  <Text strong>Role:</Text> <Text>{(profile as ManagerProfile).role}</Text>
-                  <br />
-                  <Text strong>Position:</Text> <Text>{(profile as ManagerProfile).position}</Text>
-                </>
+              // ) : user?.role === "dean manager" ? (
+              //   <>
+              //     <Text strong>Name:</Text> <Text>{(profile as ManagerProfile).first_name} {(profile as ManagerProfile).last_name}</Text>
+              //     <br />
+              //     <Text strong>Middle Name:</Text> <Text>{(profile as ManagerProfile).middle_name || "N/A"}</Text>
+              //     <br />
+              //     <Text strong>Email:</Text> <Text>{(profile as ManagerProfile).email}</Text>
+              //     <br />
+              //     <Text strong>School:</Text> <Text>{(profile as ManagerProfile).school}</Text>
+              //     <br />
+              //     <Text strong>Phone:</Text> <Text>{(profile as ManagerProfile).phone_number}</Text>
+              //     <br />
+              //     <Text strong>Role:</Text> <Text>{(profile as ManagerProfile).role}</Text>
+              //     <br />
+              //     <Text strong>Position:</Text> <Text>{(profile as ManagerProfile).position}</Text>
+              //   </>
+              // 
               ) : null}
             </div>
           ) : (
