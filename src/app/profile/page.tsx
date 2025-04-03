@@ -56,7 +56,7 @@ export default function UserProfile() {
     let apiUrl = "";
     if (user.role === "student") {
       apiUrl = `http://127.0.0.1:8000/api/students/user/${user.user_id}/`;
-    } else if (user.role === "dean" || user.role === "manager") {
+    } else if (user.role === "dean manager") {
       apiUrl = `http://127.0.0.1:8000/api/manager-profiles/?user=${user.user_id}`;
     }
 
