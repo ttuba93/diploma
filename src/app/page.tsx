@@ -40,9 +40,10 @@ export default function Home() {
   }, []);
 
   // Фильтрация по курсу
-  const filteredByCourse =
-    selectedCourse === "All"
-      ? faqs
+  const filteredByCourse = selectedCourse === "All" 
+    ? faqs 
+    : selectedCourse === "5-7" 
+      ? faqs.filter((faq) => [5, 6, 7].includes(faq.course)) 
       : faqs.filter((faq) => faq.course.toString() === selectedCourse);
 
   // Фильтрация по поисковому запросу (ищет в вопросе и ответе, без учета регистра)
