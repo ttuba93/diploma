@@ -19,6 +19,17 @@ interface Student {
   course: number;
 }
 
+interface ManagerProfile {
+  first_name: string;
+  last_name: string;
+  middle_name?: string;
+  email: string;
+  school: string;
+  phone_number: string;
+  role: string;
+  position: string;
+}
+
 interface User {
   message: string;
   username: string;
@@ -26,14 +37,13 @@ interface User {
   role: string;
 }
 
-export default function StudentProfile() {
-  const [student, setStudent] = useState<Student | null>(null);
+export default function UserProfile() {
+  const [profile, setProfile] = useState<Student | ManagerProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    // Получение данных о пользователе из локального хранилища или API
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
@@ -54,11 +64,11 @@ export default function StudentProfile() {
       fetch(apiUrl)
         .then((res) => {
           if (!res.ok) {
-            throw new Error("Failed to fetch student data");
+            throw new Error("Failed to fetch user data");
           }
           return res.json();
         })
-        .then((data: Student) => setStudent(data))
+        .then((data) => setProfile(data))
         .catch((err) => setError(err.message));
     }
   }, [user]);
@@ -72,23 +82,43 @@ export default function StudentProfile() {
       >
         <Card className="shadow-lg rounded-lg p-6 w-full max-w-md bg-white mt-6">
           <Title level={2} className="text-center text-[#002F6C]">
-            Student Profile
+            {user?.role === "student" ? "Student Profile" : "Manager/Dean Profile"}
           </Title>
           {error ? (
             <Alert message="Error" description={error} type="error" showIcon />
-          ) : student ? (
+          ) : profile ? (
             <div className="text-center">
-              <Text strong>ID:</Text> <Text>{student.kbtu_id}</Text>
-              <br />
-              <Text strong>Name:</Text> <Text>{student.first_name} {student.last_name}</Text>
-              <br />
-              <Text strong>Email:</Text> <Text>{student.email}</Text>
-              <br />
-              <Text strong>School:</Text> <Text>{student.school}</Text>
-              <br />
-              <Text strong>Speciality:</Text> <Text>{student.speciality}</Text>
-              <br />
-              <Text strong>Course:</Text> <Text>{student.course}</Text>
+              {user?.role === "student" ? (
+                <>
+                  <Text strong>ID:</Text> <Text>{(profile as Student).kbtu_id}</Text>
+                  <br />
+                  <Text strong>Name:</Text> <Text>{(profile as Student).first_name} {(profile as Student).last_name}</Text>
+                  <br />
+                  <Text strong>Email:</Text> <Text>{(profile as Student).email}</Text>
+                  <br />
+                  <Text strong>School:</Text> <Text>{(profile as Student).school}</Text>
+                  <br />
+                  <Text strong>Speciality:</Text> <Text>{(profile as Student).speciality}</Text>
+                  <br />
+                  <Text strong>Course:</Text> <Text>{(profile as Student).course}</Text>
+                </>
+              ) : (
+                <>
+                  <Text strong>Name:</Text> <Text>{(profile as ManagerProfile).first_name} {(profile as ManagerProfile).last_name}</Text>
+                  <br />
+                  <Text strong>Middle Name:</Text> <Text>{(profile as ManagerProfile).middle_name || "N/A"}</Text>
+                  <br />
+                  <Text strong>Email:</Text> <Text>{(profile as ManagerProfile).email}</Text>
+                  <br />
+                  <Text strong>School:</Text> <Text>{(profile as ManagerProfile).school}</Text>
+                  <br />
+                  <Text strong>Phone:</Text> <Text>{(profile as ManagerProfile).phone_number}</Text>
+                  <br />
+                  <Text strong>Role:</Text> <Text>{(profile as ManagerProfile).role}</Text>
+                  <br />
+                  <Text strong>Position:</Text> <Text>{(profile as ManagerProfile).position}</Text>
+                </>
+              )}
             </div>
           ) : (
             <div className="flex justify-center">
