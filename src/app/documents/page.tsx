@@ -48,48 +48,47 @@ export default function DocumentsPage() {
   );
 }
 
-// // Sample document page
-// export function DocumentDetail({ params }: { params: { id: string } }) {
-//   const { id } = params;
-//   const [document, setDocument] = useState<Document | null>(null);
-//   const router = useRouter();
+export function DocumentDetail({ params }: { params: { id: string } }) {
+  const { id } = params;
+  const [document, setDocument] = useState<Document | null>(null);
+  const router = useRouter();
 
-//   useEffect(() => {
-//     fetch(`http://localhost:8000/api/documents/${id}/`)
-//       .then((res) => res.json())
-//       .then((data) => setDocument(data));
-//   }, [id]);
+  useEffect(() => {
+    fetch(`http://localhost:8000/api/documents/${id}/`)
+      .then((res) => res.json())
+      .then((data) => setDocument(data));
+  }, [id]);
 
-//   if (!document) return <p>Loading...</p>;
+  if (!document) return <p>Loading...</p>;
 
-//   const fileExtension = document.file.split(".").pop()?.toLowerCase();
-//   const isPDF = fileExtension === "pdf";
-//   const isDOCX = fileExtension === "docx";
+  const fileExtension = document.file.split(".").pop()?.toLowerCase();
+  const isPDF = fileExtension === "pdf";
+  const isDOCX = fileExtension === "docx";
 
-//   return (
-//     <Layout>
-//       <HeaderSection />
-//       <Content style={{ padding: "32px", textAlign: "center" }}>
-//         <h1>{document.name}</h1>
-//         {isPDF ? (
-//           <iframe
-//             src={`http://localhost:8000/media/${document.file}`}
-//             width="100%"
-//             height="500px"
-//           />
-//         ) : isDOCX ? (
-//           <p>This is a DOCX file. Please download it to view.</p>
-//         ) : (
-//           <p>Unsupported file format.</p>
-//         )}
-//         <div style={{ marginTop: "20px" }}>
-//           <Button href={`http://localhost:8000/media/${document.file}`} download>Download</Button>
-//           <Button style={{ marginLeft: "10px" }}>Fill Manually</Button>
-//           <Button style={{ marginLeft: "10px" }}>Fill Automatically</Button>
-//           <Button style={{ marginLeft: "10px" }} onClick={() => router.back()}>Back</Button>
-//         </div>
-//       </Content>
-//       <Footer />
-//     </Layout>
-//   );
-// }
+  return (
+    <Layout>
+      <HeaderSection />
+      <Content style={{ padding: "32px", textAlign: "center" }}>
+        <h1>{document.name}</h1>
+        {isPDF ? (
+          <iframe
+            src={`http://localhost:8000/media/${document.file}`}
+            width="100%"
+            height="500px"
+          />
+        ) : isDOCX ? (
+          <p>This is a DOCX file. Please download it to view.</p>
+        ) : (
+          <p>Unsupported file format.</p>
+        )}
+        <div style={{ marginTop: "20px" }}>
+          <Button href={`http://localhost:8000/media/${document.file}`} download>Download</Button>
+          <Button style={{ marginLeft: "10px" }}>Fill Manually</Button>
+          <Button style={{ marginLeft: "10px" }}>Fill Automatically</Button>
+          <Button style={{ marginLeft: "10px" }} onClick={() => router.back()}>Back</Button>
+        </div>
+      </Content>
+      <Footer />
+    </Layout>
+  );
+}

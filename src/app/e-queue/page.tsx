@@ -25,7 +25,7 @@ export default function Requests() {
       <HeaderSection />
       <Content
         className="flex flex-col items-center p-10 bg-cover bg-center"
-        style={{ backgroundImage: "url('/images/kbtu-bg.jpeg')" }}
+        style={{ backgroundImage: "url('/images/kbtu.png')" }}
       >
         <Title level={2} className="bg-[#002F6C] bg-opacity-70 px-4 py-2 rounded-lg" style={{color: "white"}}>
           Virtual Dean's Office
