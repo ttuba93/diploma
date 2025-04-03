@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Input, List, Spin, Alert, Button, Modal, Form, message } from "antd";
+import { Input, List, Spin, Alert, Button, Modal, Form, message, Upload } from "antd";
+import { UploadOutlined } from "@ant-design/icons";
 import { SearchOutlined } from "@ant-design/icons";
 import axios from "axios";
 
@@ -146,6 +147,11 @@ export default function SearchSection() {
             rules={[{ required: true, message: "Введите описание!" }]}
           >
             <Input.TextArea rows={4} />
+          </Form.Item>
+          <Form.Item label="Загрузить документ (необязательно)" name="document" valuePropName="fileList" getValueFromEvent={(e) => e.fileList}>
+            <Upload beforeUpload={() => false} maxCount={1}>
+              <Button icon={<UploadOutlined />}>Выберите файл</Button>
+            </Upload>
           </Form.Item>
           <Button type="primary" htmlType="submit" className="w-full bg-blue-900 hover:bg-blue-700">
             Отправить вопрос
