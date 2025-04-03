@@ -106,21 +106,13 @@ export default function Home() {
           <Alert message="Error" description={error} type="error" showIcon />
         ) : filteredFaqs.length > 0 ? (
           filteredFaqs.map((faq) => (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
-            {filteredFaqs.length > 0 ? (
-              filteredFaqs.map((faq) => (
-                <div
-                  key={faq.id}
-                  onClick={() => setSelectedFAQ(faq)}
-                  className="p-4 border rounded-lg cursor-pointer hover:bg-gray-100 transition-all duration-200 bg-white shadow-md"
-                >
-                    <strong>{faq.question}</strong>
-                    <p className="text-gray-600 truncate">{faq.answer}</p>
-                </div>
-                ))
-              ) : (
-                <p className="text-center text-gray-500 col-span-full">No FAQs found.</p>
-              )}
+            <div 
+              key={faq.id}
+              onClick={() => setSelectedFAQ(faq)}
+              className="p-4 border rounded-lg my-2 cursor-pointer hover:bg-gray-100 transition-all duration-200"
+            >
+              <strong>{faq.question}</strong>
+              <p className="text-gray-600 truncate">{faq.answer}</p>
             </div>
           ))
         ) : (
