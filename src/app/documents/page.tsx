@@ -72,7 +72,7 @@ export function DocumentDetail({ params }: { params: { id: string } }) {
         <h1>{document.name}</h1>
         {isPDF ? (
           <iframe
-            src={`http://localhost:8000/media/${document.file}`}
+            src={`http://localhost:8000/media/documents/${document.file}`}
             width="100%"
             height="500px"
           />
