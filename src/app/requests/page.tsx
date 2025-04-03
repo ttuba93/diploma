@@ -1,22 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Layout, Spin, Alert, Modal, Button, Form, Input, Upload, message, Steps } from "antd";
+import { Layout, Button, Steps, Upload, message } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import HeaderSection from "../components/Header";
-import SearchSection from "../components/SearchSection";
 import { Footer } from "../components/Footer";
-import axios from "axios";
 
-const { Content } = Layout;
-const API_BASE_URL = "http://localhost:8000/api";
+const { Header, Content } = Layout;
 
-interface FAQ {
-  id: number;
-  question: string;
-  answer: string;
-  course: number;
-}
+const API_BASE_URL = "http://localhost:8000/api"; // Адрес Django API
 
 const processSteps = [
   "Запрос отправлен",
@@ -28,77 +20,103 @@ const processSteps = [
   "Получена обратная связь",
 ];
 
-export default function Home() {
-  const [faqs, setFaqs] = useState<FAQ[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedCourse, setSelectedCourse] = useState<string>("All");
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [selectedFAQ, setSelectedFAQ] = useState<FAQ | null>(null);
-  const [isQuestionModalOpen, setIsQuestionModalOpen] = useState<boolean>(false);
-  const [processId, setProcessId] = useState<string | null>(localStorage.getItem("processId"));
-  const [currentStep, setCurrentStep] = useState(Number(localStorage.getItem("currentStep")) || 0);
+export default function Requests() {
+  const [loading, setLoading] = useState(false);
+  const [processId, setProcessId] = useState<string | null>(
+    localStorage.getItem("processId")
+  );
+  const [currentStep, setCurrentStep] = useState(
+    Number(localStorage.getItem("currentStep")) || 0
+  );
   const [taskId, setTaskId] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
 
-  useEffect(() => {
-    axios.get("http://127.0.0.1:8000/api/faq/")
-      .then((res) => {
-        setFaqs(res.data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError("Failed to fetch FAQs.");
-        setLoading(false);
+  const getStepFromTask = (taskName: string) => {
+    if (taskName.includes("Send request info")) return 0;
+    if (taskName.includes("Set status Awaiting")) return 1;
+    if (taskName.includes("Upload document")) return 2;
+    if (taskName.includes("Documents Verification")) return 3;
+    if (taskName.includes("Set status Denied")) return 4;
+    if (taskName.includes("Set status Accepted")) return 5;
+    if (taskName.includes("Receive a feedback")) return 6;
+    return 0;
+  };
+
+  const startNewProcess = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/start-process/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ student_id: "12345", initiator: "demo" }),
       });
-  }, []);
+      const data = await response.json();
+      if (data.processInstanceId) {
+        message.success("Процесс запущен!");
+        setProcessId(data.processInstanceId);
+        localStorage.setItem("processId", data.processInstanceId);
+        setCurrentStep(1);
+        localStorage.setItem("currentStep", "1");
+      } else {
+        message.error("Ошибка запуска процесса");
+      }
+    } catch (error) {
+      message.error("Ошибка подключения к серверу");
+    }
+    setLoading(false);
+  };
+
+  const fetchProcessStatus = async () => {
+    if (!processId) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/tasks/?user_id=demo`);
+      const tasks = await response.json();
+      const task = tasks.find((t: any) => t.processInstanceId === processId);
+      if (task) {
+        const step = getStepFromTask(task.name);
+        setCurrentStep(step);
+        localStorage.setItem("currentStep", String(step));
+        setTaskId(task.id);
+      }
+    } catch (error) {
+      message.error("Ошибка загрузки статуса");
+    }
+  };
+
+  useEffect(() => {
+    if (processId) {
+      fetchProcessStatus();
+      const interval = setInterval(fetchProcessStatus, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [processId]);
 
   return (
-    <Layout className="min-h-screen">
+    <Layout>
       <HeaderSection />
-      <SearchSection />
-
-      <section className="text-center py-6 border-b">
-        <div className="flex justify-center gap-4 flex-wrap">
-          {["All", "1", "2", "3", "4", "5-7"].map((course) => (
-            <button
-              key={course}
-              onClick={() => setSelectedCourse(course)}
-              className={`px-4 py-2 border-b-2 transition-all duration-200 ${selectedCourse === course ? "border-[#002D62] font-bold text-[#002D62]" : "text-gray-500 hover:text-[#002D62] hover:border-gray-400"}`}
-            >
-              {course === "All" ? "All" : `${course} course`}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <Content className="p-6 max-w-6xl mx-auto">
-        {loading ? (
-          <div className="flex justify-center">
-            <Spin size="large" />
+      <Content style={{ padding: "20px", maxWidth: 700, margin: "auto" }}>
+        <h1>Процесс оформления</h1>
+        <Button
+          type="primary"
+          onClick={startNewProcess}
+          loading={loading}
+          style={{ marginBottom: 20 }}
+        >
+          Запустить процесс
+        </Button>
+        {processId ? (
+          <div>
+            <h3>Процесс ID: {processId}</h3>
+            <Steps current={currentStep} direction="vertical" size="small">
+              {processSteps.map((step, index) => (
+                <Steps.Step key={index} title={step} />
+              ))}
+            </Steps>
           </div>
-        ) : error ? (
-          <Alert message="Error" description={error} type="error" showIcon />
         ) : (
-          <div className="w-full">
-            {faqs.length > 0 ? (
-              faqs.map((faq) => (
-                <div
-                  key={faq.id}
-                  onClick={() => setSelectedFAQ(faq)}
-                  className="p-4 border rounded-lg cursor-pointer hover:bg-gray-100 transition-all duration-200 bg-white shadow-md max-w-full sm:max-w-lg mx-auto"
-                >
-                  <strong>{faq.question}</strong>
-                  <p className="text-gray-600 truncate">{faq.answer}</p>
-                </div>
-              ))
-            ) : (
-              <p className="text-center text-gray-500">No FAQs found.</p>
-            )}
-          </div>
+          <p>Нет активных процессов</p>
         )}
       </Content>
-
       <Footer />
     </Layout>
   );
