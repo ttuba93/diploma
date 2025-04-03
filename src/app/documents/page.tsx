@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Layout, Card, Row, Col, Button, Modal } from "antd";
 import HeaderSection from "../components/Header";
 import { Footer } from "../components/Footer";
+import SearchSection from "../components/SearchSectionDoc";
 
 const { Content } = Layout;
 
@@ -45,7 +46,7 @@ export default function DocumentsPage() {
       <>
         {isPDF ? (
           <iframe
-            src={`http://localhost:8000/media/documents/${selectedDocument.file}`}
+            src={`${selectedDocument.file}`}
             width="100%"
             height="500px"
             title={selectedDocument.name}
@@ -62,6 +63,7 @@ export default function DocumentsPage() {
   return (
     <Layout>
       <HeaderSection />
+      <SearchSection/>
       <Content style={{ padding: "32px", textAlign: "center" }}>
         <h1 style={{ fontSize: '1.8rem', color: '#002D62', marginBottom: '30px' }}>
           Document Samples
