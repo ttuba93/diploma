@@ -26,7 +26,7 @@ const languageMenu = (
 export default function HeaderSection() {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<any>(null); // Делаем тип any, чтобы принимать все данные
+  const [user, setUser] = useState<any>(null); // Тип any для хранения данных о пользователе
   const [userName, setUserName] = useState<string>('');
 
   useEffect(() => {
@@ -36,19 +36,10 @@ export default function HeaderSection() {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
 
-        // Получаем имя пользователя с бэкенда
-        const fetchUserData = async () => {
-          try {
-            const res = await fetch(`http://127.0.0.1:8000/api/students/user/${parsedUser.user_id}`);
-            if (!res.ok) throw new Error('Failed to fetch user data');
-            const data = await res.json();
-            setUserName(data.first_name); // Обновляем состояние с именем пользователя
-          } catch (err) {
-            console.error("Error fetching user data", err);
-          }
-        };
+        // Теперь данные пользователя находятся в user_data
+        const { user_data } = parsedUser; // Делаем деструктуризацию данных пользователя
 
-        fetchUserData();
+        setUserName(`${user_data.first_name} ${user_data.last_name}`); // Обновляем имя пользователя
       } catch (err) {
         console.error("Failed to parse user data", err);
       }
@@ -58,6 +49,7 @@ export default function HeaderSection() {
   const handleLogout = () => {
     localStorage.removeItem("user");
     setUser(null);
+    setUserName('');
     router.push("/login");
   };
 
@@ -84,33 +76,27 @@ export default function HeaderSection() {
           </Menu.Item>
         </Menu>
         <div className="flex gap-4 items-center">
-          {/* <Dropdown overlay={languageMenu} placement="bottomRight">
-            <GlobalOutlined className="text-xl cursor-pointer text-[#002F6C]" />
-          </Dropdown>
-          <Link href="/notifications">
-            <BellOutlined className="text-xl cursor-pointer text-[#002F6C]" />
-          </Link> */}
-          {user && (
-            <span className="text-[#002F6C] font-semibold">{user.first_name} {user.last_name}</span>
-          )}
-          {user ? (
-            <>
-              <Link href="/profile">
-                <UserOutlined className="text-xl cursor-pointer text-[#002F6C]" />
-              </Link>
-              <LogoutOutlined className="text-xl cursor-pointer text-[#002F6C]" onClick={handleLogout} />
-            </>
-          ) : (
-            <Link href="/login">
-              <UserOutlined className="text-xl cursor-pointer text-[#002F6C]" />
-            </Link>
-          )}
           <Dropdown overlay={languageMenu} placement="bottomRight">
             <GlobalOutlined className="text-xl cursor-pointer text-[#002F6C]" />
           </Dropdown>
           <Link href="/notifications">
             <BellOutlined className="text-xl cursor-pointer text-[#002F6C]" />
           </Link>
+          {user && userName && (
+            <span className="text-[#002F6C] font-semibold">{userName}</span>
+          )}
+          {user ? (
+            <Link href="/profile">
+              <UserOutlined className="text-xl cursor-pointer text-[#002F6C]" />
+            </Link>
+          ) : (
+            <Link href="/login">
+              <UserOutlined className="text-xl cursor-pointer text-[#002F6C]" />
+            </Link>
+          )}
+          {user && (
+            <LogoutOutlined className="text-xl cursor-pointer text-[#002F6C]" onClick={handleLogout} />
+          )}
         </div>
       </Header>
       <div style={{ borderBottom: "2px solid #002F6C" }}></div>

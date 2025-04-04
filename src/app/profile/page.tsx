@@ -19,21 +19,6 @@ interface Student {
   speciality: string;
   course: number;
   telephone_number?: string;
-  role?: string;
-  user?: number;
-  id?: number;
-}
-
-interface ManagerProfile {
-  first_name: string;
-  last_name: string;
-  middle_name?: string;
-  email: string;
-  school: string;
-  phone_number: string;
-  role: string;
-  position: string;
-  user?: number;
 }
 
 interface User {
@@ -44,7 +29,7 @@ interface User {
 }
 
 export default function UserProfile() {
-  const [profile, setProfile] = useState<Student | ManagerProfile | null>(null);
+  const [profile, setProfile] = useState<Student | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -65,21 +50,15 @@ export default function UserProfile() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || user.role !== "student") return;
 
     setLoading(true);
-    let apiUrl = user.role === "student"
-      ? `http://127.0.0.1:8000/api/students/user/${user.user_id}`
-      : `http://127.0.0.1:8000/api/manager-profiles/?user=${user.user_id}`;
+    const apiUrl = `http://127.0.0.1:8000/api/students/user/${user.user_id}`;
 
     fetch(apiUrl)
       .then(res => res.ok ? res.json() : Promise.reject("Failed to fetch user data"))
       .then(data => {
-        if (user.role === "dean manager" && Array.isArray(data) && data.length > 0) {
-          setProfile(data[0]);
-        } else {
-          setProfile(data);
-        }
+        setProfile(data);
       })
       .catch(setError)
       .finally(() => setLoading(false));
@@ -97,7 +76,7 @@ export default function UserProfile() {
         style={{ backgroundImage: "url('/images/kbtu1.jpg')" }}>
         <Card className="shadow-lg rounded-lg p-6 w-full max-w-md bg-white mt-6">
           <Title level={2} className="text-center text-[#002F6C]">
-            {user?.role === "student" ? "Student Profile" : "Manager/Dean Profile"}
+            Student Profile
           </Title>
           {error ? (
             <Alert message="Error" description={error} type="error" showIcon />
@@ -109,10 +88,9 @@ export default function UserProfile() {
               {"middle_name" in profile && (<><Text strong>Middle Name:</Text> <Text>{profile.middle_name || "N/A"}</Text><br /></>)}
               <Text strong>Email:</Text> <Text>{profile.email}</Text><br />
               <Text strong>School:</Text> <Text>{profile.school}</Text><br />
-              {"speciality" in profile && (<><Text strong>Speciality:</Text> <Text>{profile.speciality}</Text><br /></>)}
-              {"course" in profile && (<><Text strong>Course:</Text> <Text>{profile.course}</Text><br /></>)}
+              <Text strong>Speciality:</Text> <Text>{profile.speciality}</Text><br />
+              <Text strong>Course:</Text> <Text>{profile.course}</Text><br />
               {"telephone_number" in profile && (<><Text strong>Phone:</Text> <Text>{profile.telephone_number || "N/A"}</Text><br /></>)}
-              {"position" in profile && (<><Text strong>Position:</Text> <Text>{profile.position}</Text><br /></>)}
               <Button type="primary" danger className="mt-4" onClick={handleLogout}>Logout</Button>
             </div>
           ) : (

@@ -3,8 +3,9 @@
 import { Layout, Menu, Button, Dropdown } from "antd";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { BellOutlined, StarOutlined, UserOutlined, GlobalOutlined } from "@ant-design/icons";
+import { usePathname, useRouter } from "next/navigation";
+import { BellOutlined, UserOutlined, GlobalOutlined, LogoutOutlined } from "@ant-design/icons";
+import { useEffect, useState } from "react";
 
 const { Header } = Layout;
 
@@ -24,6 +25,33 @@ const languageMenu = (
 
 export default function HeaderSection() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null); // Тип any для хранения данных о пользователе
+  const [userName, setUserName] = useState<string>('');
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+
+        // Теперь данные пользователя находятся в user_data
+        const { user_data } = parsedUser; // Делаем деструктуризацию данных пользователя
+
+        setUserName(`${user_data.first_name} ${user_data.last_name}`); // Обновляем имя пользователя
+      } catch (err) {
+        console.error("Failed to parse user data", err);
+      }
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    setUser(null);
+    setUserName('');
+    router.push("/login");
+  };
 
   return (
     <>
@@ -37,7 +65,7 @@ export default function HeaderSection() {
           <Menu.Item key="/manager/faq">
             <Link href="/manager/faq">HOME</Link>
           </Menu.Item>
-          <Menu.Item key="/documents">
+          <Menu.Item key="/manager/documents">
             <Link href="/manager/documents">Documents</Link>
           </Menu.Item>
           <Menu.Item key="/manager/e-queue">
@@ -47,19 +75,28 @@ export default function HeaderSection() {
             <Link href="/manager/requests">Requests</Link>
           </Menu.Item>
         </Menu>
-        <div className="flex gap-2">
+        <div className="flex gap-4 items-center">
           <Dropdown overlay={languageMenu} placement="bottomRight">
             <GlobalOutlined className="text-xl cursor-pointer text-[#002F6C]" />
           </Dropdown>
-          <Link href="/notifications">
+          <Link href="/manager/notifications">
             <BellOutlined className="text-xl cursor-pointer text-[#002F6C]" />
           </Link>
-          {/* <Link href="/favorites">
-            <StarOutlined className="text-xl cursor-pointer text-[#002F6C]" />
-          </Link> */}
-          <Link href="/login">
-            <UserOutlined className="text-xl cursor-pointer text-[#002F6C]" />
-          </Link>
+          {user && userName && (
+            <span className="text-[#002F6C] font-semibold">{userName}</span>
+          )}
+          {user ? (
+            <Link href="/manager/profile">
+              <UserOutlined className="text-xl cursor-pointer text-[#002F6C]" />
+            </Link>
+          ) : (
+            <Link href="/login">
+              <UserOutlined className="text-xl cursor-pointer text-[#002F6C]" />
+            </Link>
+          )}
+          {user && (
+            <LogoutOutlined className="text-xl cursor-pointer text-[#002F6C]" onClick={handleLogout} />
+          )}
         </div>
       </Header>
       <div style={{ borderBottom: "2px solid #002F6C" }}></div>
