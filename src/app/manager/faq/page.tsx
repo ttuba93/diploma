@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Layout, Spin, Alert, Modal, Button, Form, Input, Checkbox, Select, message } from "antd";
-import HeaderSection from "../components/Header";
-import { Footer } from "../components/Footer";
 import axios from "axios";
+
+import HeaderSection from "../components/Header";
+import {Footer} from "../components/Footer";
 
 const { Content } = Layout;
 const { Option } = Select;
@@ -13,15 +14,19 @@ interface FAQRequest {
   id: number;
   topic: string;
   description: string;
+  answer?: string;
+  is_answered: boolean;
+  published: boolean;
   course?: number;
-  is_faq: boolean;
 }
 
 export default function ManagerPage() {
   const [requests, setRequests] = useState<FAQRequest[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedRequest, setSelectedRequest] = useState<FAQRequest | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<string>("All");
+  const [selectedFAQ, setSelectedFAQ] = useState<FAQRequest | null>(null);
+  const [isAnswerModalOpen, setIsAnswerModalOpen] = useState<boolean>(false);
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -37,29 +42,56 @@ export default function ManagerPage() {
       });
   }, []);
 
-  const handleSubmit = (values: { response: string; course: number; is_faq: boolean }) => {
-    if (!selectedRequest) return;
+  const handleSubmit = (values: { answer: string; published: boolean }) => {
+    if (!selectedFAQ) return;
 
     axios
-      .patch(`http://127.0.0.1:8000/api/faq-requests/${selectedRequest.id}/`, {
-        course: values.course,
-        is_faq: values.is_faq,
-        answer: values.response,
+      .patch(`http://127.0.0.1:8000/api/faq-requests/${selectedFAQ.id}/`, {
+        answer: values.answer,
+        is_answered: true,
+        published: values.published,
       })
       .then(() => {
-        message.success("Response submitted successfully!");
-        setRequests((prev) => prev.filter((req) => req.id !== selectedRequest.id));
-        setSelectedRequest(null);
+        message.success("Answer submitted successfully!");
+        setRequests((prev) =>
+          prev.map((faq) =>
+            faq.id === selectedFAQ.id ? { ...faq, ...values, is_answered: true } : faq
+          )
+        );
+        setIsAnswerModalOpen(false);
         form.resetFields();
       })
       .catch(() => {
-        message.error("Error submitting response!");
+        message.error("Failed to submit the answer!");
       });
   };
+
+  const unanswered = requests.filter((faq) => !faq.is_answered);
+  const answered = requests.filter((faq) => faq.is_answered);
 
   return (
     <Layout className="min-h-screen">
       <HeaderSection />
+
+      {/* Course filter */}
+      <section className="text-center py-6 border-b">
+        <div className="flex justify-center gap-4 flex-wrap">
+          {["All", "1", "2", "3", "4", "5-7"].map((course) => (
+            <button
+              key={course}
+              onClick={() => setSelectedCourse(course)}
+              className={`px-4 py-2 border-b-2 transition-all duration-200 ${
+                selectedCourse === course
+                  ? "border-[#002D62] font-bold text-[#002D62]"
+                  : "text-gray-500 hover:text-[#002D62] hover:border-gray-400"
+              }`}
+            >
+              {course === "All" ? "All" : `${course} course`}
+            </button>
+          ))}
+        </div>
+      </section>
+
       <Content className="p-6 max-w-4xl mx-auto w-full">
         {loading ? (
           <div className="flex justify-center">
@@ -67,50 +99,89 @@ export default function ManagerPage() {
           </div>
         ) : error ? (
           <Alert message="Error" description={error} type="error" showIcon />
-        ) : requests.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {requests.map((request) => (
-              <div
-                key={request.id}
-                onClick={() => setSelectedRequest(request)}
-                className="p-4 border rounded-lg cursor-pointer hover:bg-gray-100 transition-all duration-200"
-              >
-                <strong>{request.topic}</strong>
-                <p className="text-gray-600 truncate">{request.description}</p>
-              </div>
-            ))}
-          </div>
         ) : (
-          <p className="text-center text-gray-500">No pending requests.</p>
+          <>
+            {/* Unanswered Questions */}
+            <h2 className="text-xl font-semibold my-4">Unanswered Questions</h2>
+            {unanswered.length > 0 ? (
+              unanswered.map((faq) => (
+                <div
+                  key={faq.id}
+                  className="p-4 border rounded-lg my-2 cursor-pointer hover:bg-gray-100 transition-all duration-200"
+                >
+                  <strong>{faq.topic}</strong>
+                  <p className="text-gray-600">{faq.description}</p>
+                  <Button
+                    type="primary"
+                    className="mt-2 bg-blue-900 hover:bg-blue-700"
+                    onClick={() => {
+                      setSelectedFAQ(faq);
+                      setIsAnswerModalOpen(true);
+                    }}
+                  >
+                    Answer
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-gray-500">No unanswered questions.</p>
+            )}
+
+            {/* Answered Questions */}
+            <h2 className="text-xl font-semibold my-4">Answered Questions</h2>
+            {answered.length > 0 ? (
+              answered.map((faq) => (
+                <div
+                  key={faq.id}
+                  className="p-4 border rounded-lg my-2 cursor-pointer hover:bg-gray-100 transition-all duration-200"
+                >
+                  <strong>{faq.topic}</strong>
+                  <p className="text-gray-600">{faq.description}</p>
+                  <p className="mt-2"><strong>Answer:</strong> {faq.answer}</p>
+                  <Button
+                    type="default"
+                    className="mt-2"
+                    onClick={() => {
+                      setSelectedFAQ(faq);
+                      setIsAnswerModalOpen(true);
+                      form.setFieldsValue({ answer: faq.answer, published: faq.published });
+                    }}
+                  >
+                    Edit
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-gray-500">No answered questions.</p>
+            )}
+          </>
         )}
       </Content>
 
+      {/* Answer Modal */}
       <Modal
-        title={selectedRequest?.topic}
-        open={!!selectedRequest}
-        onCancel={() => setSelectedRequest(null)}
+        title={selectedFAQ?.is_answered ? "Edit Answer" : "Answer Question"}
+        open={isAnswerModalOpen}
+        onCancel={() => setIsAnswerModalOpen(false)}
         footer={null}
       >
-        <p>{selectedRequest?.description}</p>
-        <Form form={form} layout="vertical" onFinish={handleSubmit} className="space-y-4">
-          <Form.Item label="Response" name="response" rules={[{ required: true, message: "Enter a response!" }]}> 
+        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+          <Form.Item
+            label="Your Answer"
+            name="answer"
+            rules={[{ required: true, message: "Please enter the answer!" }]}
+          >
             <Input.TextArea rows={4} />
           </Form.Item>
-          <Form.Item label="Assign Course" name="course" rules={[{ required: true, message: "Select a course!" }]}> 
-            <Select>
-              {[1, 2, 3, 4, 5, 6, 7].map((course) => (
-                <Option key={course} value={course}>{course} course</Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item name="is_faq" valuePropName="checked">
-            <Checkbox>Mark as FAQ</Checkbox>
+          <Form.Item name="published" valuePropName="checked">
+            <Checkbox>Publish as FAQ</Checkbox>
           </Form.Item>
           <Button type="primary" htmlType="submit" className="w-full bg-blue-900 hover:bg-blue-700">
-            Submit Response
+            {selectedFAQ?.is_answered ? "Update Answer" : "Submit Answer"}
           </Button>
         </Form>
       </Modal>
+
       <Footer />
     </Layout>
   );

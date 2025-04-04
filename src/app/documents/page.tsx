@@ -91,7 +91,7 @@ export default function DocumentsPage() {
             <Button 
               key="download" 
               type="primary" 
-              href={selectedDocument ? `http://localhost:8000/media/documents/${selectedDocument.file}` : '#'} 
+              href={selectedDocument ? `${selectedDocument.file}` : '#'} 
               download
             >
               Download
