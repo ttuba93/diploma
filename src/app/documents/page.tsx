@@ -68,7 +68,7 @@ export default function DocumentsPage() {
           width="100%"
           height="500px"
           title={selectedDocument.name}
-        />
+        ></iframe>
       );
     } else if (fileExtension === "docx") {
       return loading ? <Spin /> : <div dangerouslySetInnerHTML={{ __html: docxContent || "" }} />;
