@@ -59,7 +59,7 @@ export default function HeaderSection() {
   return (
     <>
       <Header className="bg-white flex justify-between items-center px-8 shadow-md h-18">
-        <Link href="/">
+        <Link href="/manager/faq">
           <div className="flex items-center gap-2">
             <Image src="/images/logo.png" alt="KBTU Logo" width={250} height={125} />
           </div>
