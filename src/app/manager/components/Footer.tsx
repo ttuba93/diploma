@@ -23,10 +23,10 @@ export const Footer = () => {
           </h4>
           <ul className="space-y-3">
             <li><Link href="/about" className="hover:text-[#FFD700] transition duration-300">About Us</Link></li>
-            <li><Link href="/" className="hover:text-[#FFD700] transition duration-300">FAQ</Link></li>
-            <li><Link href="/documents" className="hover:text-[#FFD700] transition duration-300">Documents</Link></li>
-            <li><Link href="/e-queue" className="hover:text-[#FFD700] transition duration-300">E-queue</Link></li>
-            <li><Link href="/requests" className="hover:text-[#FFD700] transition duration-300">Requests</Link></li>
+            <li><Link href="/manager/faq" className="hover:text-[#FFD700] transition duration-300">FAQ</Link></li>
+            <li><Link href="/manager/documents" className="hover:text-[#FFD700] transition duration-300">Documents</Link></li>
+            <li><Link href="/manager/e-queue" className="hover:text-[#FFD700] transition duration-300">E-queue</Link></li>
+            <li><Link href="/manager/requests" className="hover:text-[#FFD700] transition duration-300">Requests</Link></li>
           </ul>
         </nav>
 

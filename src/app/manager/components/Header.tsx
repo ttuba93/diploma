@@ -54,9 +54,9 @@ export default function HeaderSection() {
           <Link href="/notifications">
             <BellOutlined className="text-xl cursor-pointer text-[#002F6C]" />
           </Link>
-          <Link href="/favorites">
+          {/* <Link href="/favorites">
             <StarOutlined className="text-xl cursor-pointer text-[#002F6C]" />
-          </Link>
+          </Link> */}
           <Link href="/login">
             <UserOutlined className="text-xl cursor-pointer text-[#002F6C]" />
           </Link>
