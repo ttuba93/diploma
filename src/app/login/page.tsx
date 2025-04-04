@@ -23,45 +23,46 @@ export default function SignIn() {
     setLoading(true);
 
     try {
-      // Login request
+      // Запрос на авторизацию
       const response = await axios.post("http://127.0.0.1:8000/api/login/", {
         username: form.username,
         password: form.password,
       });
 
-      // Save token
+      // Сохранение токена
       localStorage.setItem("token", response.data.access);
 
-      // Get user info from response
+      // Получение данных пользователя из ответа
       const userData = {
         message: response.data.message || "Login successful",
         username: response.data.username,
         user_id: response.data.user_id,
         role: response.data.role,
+        user_data: response.data.user_data, // Сохраняем все данные пользователя
       };
 
-      // Store complete user object in localStorage
+      // Сохраняем все данные пользователя в localStorage
       localStorage.setItem("user", JSON.stringify(userData));
 
       console.log("Login successful, user data:", userData);
 
-      // Show success message
+      // Показать сообщение об успешном входе
       antMessage.success("Login successful!");
 
-      // Redirect user based on role
+      // Перенаправляем пользователя в зависимости от его роли
       if (userData.role === "student") {
-        router.push("/profile"); // Student profile page
+        router.push("/profile"); // Студенческий профиль
       } else if (userData.role === "dean manager") {
-        router.push("/manager/profile"); // Dean Manager profile page
+        router.push("/manager/profile"); // Профиль менеджера деканата
       } else {
-        // Fallback if no known role is found
+        // Если роль не распознана
         antMessage.error("Unknown user role");
       }
     } catch (err) {
       console.error("Login error:", err);
 
       if (axios.isAxiosError(err) && err.response) {
-        // Get specific error message from API if available
+        // Получение конкретного сообщения об ошибке
         const errorMsg =
           err.response.data.detail ||
           err.response.data.error ||
@@ -83,7 +84,7 @@ export default function SignIn() {
       <HeaderSection />
       <div className="flex justify-center items-center flex-grow">
         <div className="flex max-w-4xl w-full bg-white shadow-lg rounded-lg overflow-hidden">
-          {/* Left side (Login) */}
+          {/* Левая часть (Вход) */}
           <div className="w-1/2 p-10 flex flex-col items-center">
             <h2 className="text-xl font-semibold text-[#002D62] mb-4">Sign in to your account</h2>
             <form onSubmit={handleSubmit} className="w-full">
@@ -115,7 +116,7 @@ export default function SignIn() {
             </form>
             {error && <p className="text-red-500 mt-4">{error}</p>}
           </div>
-          {/* Right side (Registration) */}
+          {/* Правая часть (Регистрация) */}
           <div className="w-1/2 p-10 bg-[#002D62] text-white flex flex-col items-center justify-center">
             <h2 className="text-xl font-semibold mb-4">Create a new account</h2>
             <p className="text-center mb-4">If you don't have an account</p>

@@ -27,7 +27,7 @@ export default function HeaderSection() {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<any>(null); // Тип any для хранения данных о пользователе
-  const [userName, setUserName] = useState<string>('');
+  const [userName, setUserName] = useState<string>(''); // Для имени пользователя
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -36,12 +36,12 @@ export default function HeaderSection() {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
 
-        // Теперь данные пользователя находятся в user_data
-        const { user_data } = parsedUser; // Делаем деструктуризацию данных пользователя
+        // Деструктурируем данные пользователя
+        const { user_data } = parsedUser;
 
-        // В зависимости от роли извлекаем имя и фамилию
+        // Извлекаем имя и фамилию в зависимости от наличия
         if (user_data && user_data.first_name && user_data.last_name) {
-          setUserName(`${user_data.first_name} ${user_data.last_name}`); // Обновляем имя пользователя
+          setUserName(`${user_data.first_name} ${user_data.last_name}`);
         }
       } catch (err) {
         console.error("Failed to parse user data", err);
@@ -79,12 +79,6 @@ export default function HeaderSection() {
           </Menu.Item>
         </Menu>
         <div className="flex gap-4 items-center">
-          <Dropdown overlay={languageMenu} placement="bottomRight">
-            <GlobalOutlined className="text-xl cursor-pointer text-[#002F6C]" />
-          </Dropdown>
-          <Link href="/manager/notifications">
-            <BellOutlined className="text-xl cursor-pointer text-[#002F6C]" />
-          </Link>
           {user && userName && (
             <span className="text-[#002F6C] font-semibold mr-2">{userName}</span>
           )}
@@ -100,6 +94,12 @@ export default function HeaderSection() {
           {user && (
             <LogoutOutlined className="text-xl cursor-pointer text-[#002F6C]" onClick={handleLogout} />
           )}
+          <Dropdown overlay={languageMenu} placement="bottomRight">
+            <GlobalOutlined className="text-xl cursor-pointer text-[#002F6C]" />
+          </Dropdown>
+          <Link href="/manager/notifications">
+            <BellOutlined className="text-xl cursor-pointer text-[#002F6C]" />
+          </Link>
         </div>
       </Header>
       <div style={{ borderBottom: "2px solid #002F6C" }}></div>
