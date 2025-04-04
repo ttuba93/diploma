@@ -37,27 +37,35 @@ export default function SignIn() {
         message: response.data.message || "Login successful",
         username: response.data.username,
         user_id: response.data.user_id,
-        role: response.data.role
+        role: response.data.role,
       };
 
       // Store complete user object in localStorage
       localStorage.setItem("user", JSON.stringify(userData));
 
       console.log("Login successful, user data:", userData);
-      
+
       // Show success message
       antMessage.success("Login successful!");
-      
-      // Redirect user to profile page
-      router.push("/profile");
+
+      // Redirect user based on role
+      if (userData.role === "student") {
+        router.push("/profile"); // Student profile page
+      } else if (userData.role === "dean manager") {
+        router.push("/manager/profile"); // Dean Manager profile page
+      } else {
+        // Fallback if no known role is found
+        antMessage.error("Unknown user role");
+      }
     } catch (err) {
       console.error("Login error:", err);
-      
+
       if (axios.isAxiosError(err) && err.response) {
         // Get specific error message from API if available
-        const errorMsg = err.response.data.detail || 
-                         err.response.data.error || 
-                         "Login failed. Please check your credentials.";
+        const errorMsg =
+          err.response.data.detail ||
+          err.response.data.error ||
+          "Login failed. Please check your credentials.";
         setError(errorMsg);
       } else {
         setError("Login failed. Please check your connection and try again.");

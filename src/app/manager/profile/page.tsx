@@ -9,14 +9,13 @@ import { Footer } from "../components/Footer";
 const { Content } = Layout;
 const { Title, Text } = Typography;
 
-interface Student {
+interface DeanManager {
   first_name: string;
   last_name: string;
   email: string;
   school: string;
-  speciality: string;
-  course: number;
-  telephone_number?: string;
+  phone_number: string;
+  position: string;
 }
 
 interface User {
@@ -24,11 +23,11 @@ interface User {
   username: string;
   user_id: number;
   role: string;
-  user_data: Student;
+  user_data: DeanManager;
 }
 
-export default function StudentProfile() {
-  const [profile, setProfile] = useState<Student | null>(null);
+export default function DeanManagerProfile() {
+  const [profile, setProfile] = useState<DeanManager | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -49,15 +48,15 @@ export default function StudentProfile() {
   }, []);
 
   useEffect(() => {
-    if (!user || user.role !== "student") return;
+    if (!user || user.role !== "dean manager") return;
 
     setLoading(true);
-    const apiUrl = `http://127.0.0.1:8000/api/students/user/${user.user_id}`;
+    const apiUrl = `http://127.0.0.1:8000/api/manager-profiles/?user=${user.user_id}`;
 
     fetch(apiUrl)
       .then(res => res.ok ? res.json() : Promise.reject("Failed to fetch user data"))
       .then(data => {
-        setProfile(data);
+        setProfile(data[0]); // Assuming the response is an array with a single element
       })
       .catch(setError)
       .finally(() => setLoading(false));
@@ -75,7 +74,7 @@ export default function StudentProfile() {
         style={{ backgroundImage: "url('/images/kbtu1.jpg')" }}>
         <Card className="shadow-lg rounded-lg p-6 w-full max-w-md bg-white mt-6">
           <Title level={2} className="text-center text-[#002F6C]">
-            Student Profile
+            Manager/Dean Profile
           </Title>
           {error ? (
             <Alert message="Error" description={error} type="error" showIcon />
@@ -86,9 +85,8 @@ export default function StudentProfile() {
               <Text strong>Name:</Text> <Text>{profile.first_name} {profile.last_name}</Text><br />
               <Text strong>Email:</Text> <Text>{profile.email}</Text><br />
               <Text strong>School:</Text> <Text>{profile.school}</Text><br />
-              <Text strong>Speciality:</Text> <Text>{profile.speciality}</Text><br />
-              <Text strong>Course:</Text> <Text>{profile.course}</Text><br />
-              <Text strong>Phone:</Text> <Text>{profile.telephone_number || "N/A"}</Text><br />
+              <Text strong>Position:</Text> <Text>{profile.position}</Text><br />
+              <Text strong>Phone:</Text> <Text>{profile.phone_number}</Text><br />
               <Button type="primary" danger className="mt-4" onClick={handleLogout}>Logout</Button>
             </div>
           ) : (
