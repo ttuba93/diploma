@@ -9,11 +9,6 @@ import { useEffect, useState } from "react";
 
 const { Header } = Layout;
 
-interface User {
-  first_name: string;
-  last_name: string;
-}
-
 const languageMenu = (
   <Menu>
     <Menu.Item key="en">
@@ -31,14 +26,29 @@ const languageMenu = (
 export default function HeaderSection() {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any>(null); // Делаем тип any, чтобы принимать все данные
+  const [userName, setUserName] = useState<string>('');
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
-        const parsedUser: User = JSON.parse(storedUser);
+        const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
+
+        // Получаем имя пользователя с бэкенда
+        const fetchUserData = async () => {
+          try {
+            const res = await fetch(`http://127.0.0.1:8000/api/users/${parsedUser.user_id}`);
+            if (!res.ok) throw new Error('Failed to fetch user data');
+            const data = await res.json();
+            setUserName(data.first_name); // Обновляем состояние с именем пользователя
+          } catch (err) {
+            console.error("Error fetching user data", err);
+          }
+        };
+
+        fetchUserData();
       } catch (err) {
         console.error("Failed to parse user data", err);
       }
