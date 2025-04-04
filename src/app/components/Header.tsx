@@ -39,7 +39,7 @@ export default function HeaderSection() {
         // Получаем имя пользователя с бэкенда
         const fetchUserData = async () => {
           try {
-            const res = await fetch(`http://127.0.0.1:8000/api/users/${parsedUser.user_id}`);
+            const res = await fetch(`http://127.0.0.1:8000/api/students/user/${parsedUser.user_id}`);
             if (!res.ok) throw new Error('Failed to fetch user data');
             const data = await res.json();
             setUserName(data.first_name); // Обновляем состояние с именем пользователя
