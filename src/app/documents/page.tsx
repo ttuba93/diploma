@@ -66,7 +66,7 @@ export default function DocumentsPage() {
       <SearchSection/>
       <Content style={{ padding: "32px", textAlign: "center" }}>
         <h1 style={{ fontSize: '1.8rem', color: '#002D62', marginBottom: '30px' }}>
-          Document Samples
+          Samples
         </h1>
         <Row gutter={[16, 16]} justify="center" style={{ marginTop: "20px" }}>
           {documents.map((doc) => (
