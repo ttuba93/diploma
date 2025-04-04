@@ -1,6 +1,6 @@
 "use client";
 
-import { Layout, Menu, Button, Dropdown } from "antd";
+import { Layout, Menu, Dropdown } from "antd";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -39,7 +39,10 @@ export default function HeaderSection() {
         // Теперь данные пользователя находятся в user_data
         const { user_data } = parsedUser; // Делаем деструктуризацию данных пользователя
 
-        setUserName(`${user_data.first_name} ${user_data.last_name}`); // Обновляем имя пользователя
+        // В зависимости от роли извлекаем имя и фамилию
+        if (user_data && user_data.first_name && user_data.last_name) {
+          setUserName(`${user_data.first_name} ${user_data.last_name}`); // Обновляем имя пользователя
+        }
       } catch (err) {
         console.error("Failed to parse user data", err);
       }
@@ -83,7 +86,7 @@ export default function HeaderSection() {
             <BellOutlined className="text-xl cursor-pointer text-[#002F6C]" />
           </Link>
           {user && userName && (
-            <span className="text-[#002F6C] font-semibold">{userName}</span>
+            <span className="text-[#002F6C] font-semibold mr-2">{userName}</span>
           )}
           {user ? (
             <Link href="/manager/profile">
