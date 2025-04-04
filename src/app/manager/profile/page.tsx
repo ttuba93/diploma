@@ -79,7 +79,7 @@ export default function DeanManagerProfile() {
         }}
       >
         <Card 
-          className="shadow-xl rounded-lg w-full max-w-lg bg-white" 
+          className="shadow-xl rounded-lg w-full max-w-3xl bg-white" 
           bordered={false}
           style={{ overflow: 'hidden' }}
         >
@@ -133,49 +133,51 @@ export default function DeanManagerProfile() {
                 <Text style={{ color: '#e6f7ff' }}>{profile.position}</Text>
               </div>
 
-              {/* Profile Information */}
+              {/* Profile Information in Two Columns */}
               <div style={{ padding: '0 24px 24px' }}>
-                <Divider orientation="left" style={{ margin: '0 0 16px 0' }}>Personal Information</Divider>
+                <Divider orientation="center" style={{ margin: '0 0 24px 0' }}>Profile Information</Divider>
                 
-                <Row gutter={[16, 24]}>
-                  <Col span={24}>
-                    <Space>
-                      <MailOutlined style={{ color: '#002F6C' }} />
-                      <Text strong>Email:</Text>
-                    </Space>
-                    <div style={{ paddingLeft: '24px' }}>{profile.email}</div>
+                <Row gutter={[32, 16]}>
+                  {/* Left Column */}
+                  <Col xs={24} md={12}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <Space>
+                        <MailOutlined style={{ color: '#002F6C' }} />
+                        <Text strong>Email:</Text>
+                      </Space>
+                      <div style={{ paddingLeft: '24px' }}>{profile.email}</div>
+                    </div>
+                    
+                    <div style={{ marginBottom: '16px' }}>
+                      <Space>
+                        <PhoneOutlined style={{ color: '#002F6C' }} />
+                        <Text strong>Phone:</Text>
+                      </Space>
+                      <div style={{ paddingLeft: '24px' }}>{profile.phone_number}</div>
+                    </div>
                   </Col>
-
-                  <Col span={24}>
-                    <Space>
-                      <PhoneOutlined style={{ color: '#002F6C' }} />
-                      <Text strong>Phone:</Text>
-                    </Space>
-                    <div style={{ paddingLeft: '24px' }}>{profile.phone_number}</div>
+                  
+                  {/* Right Column */}
+                  <Col xs={24} md={12}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <Space>
+                        <IdcardOutlined style={{ color: '#002F6C' }} />
+                        <Text strong>Position:</Text>
+                      </Space>
+                      <div style={{ paddingLeft: '24px' }}>{profile.position}</div>
+                    </div>
+                    
+                    <div style={{ marginBottom: '16px' }}>
+                      <Space>
+                        <BankOutlined style={{ color: '#002F6C' }} />
+                        <Text strong>School:</Text>
+                      </Space>
+                      <div style={{ paddingLeft: '24px' }}>{profile.school}</div>
+                    </div>
                   </Col>
                 </Row>
 
-                <Divider orientation="left" style={{ margin: '16px 0' }}>Work Information</Divider>
-                
-                <Row gutter={[16, 24]}>
-                  <Col span={24}>
-                    <Space>
-                      <IdcardOutlined style={{ color: '#002F6C' }} />
-                      <Text strong>Position:</Text>
-                    </Space>
-                    <div style={{ paddingLeft: '24px' }}>{profile.position}</div>
-                  </Col>
-
-                  <Col span={24}>
-                    <Space>
-                      <BankOutlined style={{ color: '#002F6C' }} />
-                      <Text strong>School:</Text>
-                    </Space>
-                    <div style={{ paddingLeft: '24px' }}>{profile.school}</div>
-                  </Col>
-                </Row>
-
-                <div style={{ textAlign: 'center', marginTop: '32px' }}>
+                <div style={{ textAlign: 'center', marginTop: '24px' }}>
                   <Button 
                     type="primary" 
                     icon={<LogoutOutlined />} 

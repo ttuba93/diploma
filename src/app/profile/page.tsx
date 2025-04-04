@@ -80,7 +80,7 @@ export default function StudentProfile() {
         }}
       >
         <Card 
-          className="shadow-xl rounded-lg w-full max-w-lg bg-white" 
+          className="shadow-xl rounded-lg w-full max-w-3xl bg-white" 
           bordered={false}
           style={{ overflow: 'hidden' }}
         >
@@ -134,57 +134,59 @@ export default function StudentProfile() {
                 <Text style={{ color: '#e6f7ff' }}>Student</Text>
               </div>
 
-              {/* Profile Information */}
+              {/* Profile Information in Two Columns */}
               <div style={{ padding: '0 24px 24px' }}>
-                <Divider orientation="left" style={{ margin: '0 0 16px 0' }}>Personal Information</Divider>
+                <Divider orientation="center" style={{ margin: '0 0 24px 0' }}>Profile Information</Divider>
                 
-                <Row gutter={[16, 24]}>
-                  <Col span={24}>
-                    <Space>
-                      <MailOutlined style={{ color: '#002F6C' }} />
-                      <Text strong>Email:</Text>
-                    </Space>
-                    <div style={{ paddingLeft: '24px' }}>{profile.email}</div>
+                <Row gutter={[32, 16]}>
+                  {/* Left Column */}
+                  <Col xs={24} md={12}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <Space>
+                        <MailOutlined style={{ color: '#002F6C' }} />
+                        <Text strong>Email:</Text>
+                      </Space>
+                      <div style={{ paddingLeft: '24px' }}>{profile.email}</div>
+                    </div>
+                    
+                    <div style={{ marginBottom: '16px' }}>
+                      <Space>
+                        <PhoneOutlined style={{ color: '#002F6C' }} />
+                        <Text strong>Phone:</Text>
+                      </Space>
+                      <div style={{ paddingLeft: '24px' }}>{profile.telephone_number || "Not provided"}</div>
+                    </div>
+                    
+                    <div style={{ marginBottom: '16px' }}>
+                      <Space>
+                        <BankOutlined style={{ color: '#002F6C' }} />
+                        <Text strong>School:</Text>
+                      </Space>
+                      <div style={{ paddingLeft: '24px' }}>{profile.school}</div>
+                    </div>
                   </Col>
-
-                  <Col span={24}>
-                    <Space>
-                      <PhoneOutlined style={{ color: '#002F6C' }} />
-                      <Text strong>Phone:</Text>
-                    </Space>
-                    <div style={{ paddingLeft: '24px' }}>{profile.telephone_number || "Not provided"}</div>
+                  
+                  {/* Right Column */}
+                  <Col xs={24} md={12}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <Space>
+                        <BookOutlined style={{ color: '#002F6C' }} />
+                        <Text strong>Speciality:</Text>
+                      </Space>
+                      <div style={{ paddingLeft: '24px' }}>{profile.speciality}</div>
+                    </div>
+                    
+                    <div style={{ marginBottom: '16px' }}>
+                      <Space>
+                        <NumberOutlined style={{ color: '#002F6C' }} />
+                        <Text strong>Course:</Text>
+                      </Space>
+                      <div style={{ paddingLeft: '24px' }}>Year {profile.course}</div>
+                    </div>
                   </Col>
                 </Row>
 
-                <Divider orientation="left" style={{ margin: '16px 0' }}>Academic Information</Divider>
-                
-                <Row gutter={[16, 24]}>
-                  <Col span={24}>
-                    <Space>
-                      <BankOutlined style={{ color: '#002F6C' }} />
-                      <Text strong>School:</Text>
-                    </Space>
-                    <div style={{ paddingLeft: '24px' }}>{profile.school}</div>
-                  </Col>
-
-                  <Col span={24}>
-                    <Space>
-                      <BookOutlined style={{ color: '#002F6C' }} />
-                      <Text strong>Speciality:</Text>
-                    </Space>
-                    <div style={{ paddingLeft: '24px' }}>{profile.speciality}</div>
-                  </Col>
-
-                  <Col span={24}>
-                    <Space>
-                      <NumberOutlined style={{ color: '#002F6C' }} />
-                      <Text strong>Course:</Text>
-                    </Space>
-                    <div style={{ paddingLeft: '24px' }}>Year {profile.course}</div>
-                  </Col>
-                </Row>
-
-                <div style={{ textAlign: 'center', marginTop: '32px' }}>
+                <div style={{ textAlign: 'center', marginTop: '24px' }}>
                   <Button 
                     type="primary" 
                     icon={<LogoutOutlined />} 
