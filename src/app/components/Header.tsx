@@ -3,10 +3,16 @@
 import { Layout, Menu, Button, Dropdown } from "antd";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { BellOutlined, StarOutlined, UserOutlined, GlobalOutlined } from "@ant-design/icons";
+import { usePathname, useRouter } from "next/navigation";
+import { BellOutlined, UserOutlined, GlobalOutlined, LogoutOutlined } from "@ant-design/icons";
+import { useEffect, useState } from "react";
 
 const { Header } = Layout;
+
+interface User {
+  first_name: string;
+  last_name: string;
+}
 
 const languageMenu = (
   <Menu>
@@ -24,6 +30,26 @@ const languageMenu = (
 
 export default function HeaderSection() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const parsedUser: User = JSON.parse(storedUser);
+        setUser(parsedUser);
+      } catch (err) {
+        console.error("Failed to parse user data", err);
+      }
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    setUser(null);
+    router.push("/login");
+  };
 
   return (
     <>
@@ -47,19 +73,23 @@ export default function HeaderSection() {
             <Link href="/requests">Requests</Link>
           </Menu.Item>
         </Menu>
-        <div className="flex gap-2">
+        <div className="flex gap-4 items-center">
           <Dropdown overlay={languageMenu} placement="bottomRight">
             <GlobalOutlined className="text-xl cursor-pointer text-[#002F6C]" />
           </Dropdown>
           <Link href="/notifications">
             <BellOutlined className="text-xl cursor-pointer text-[#002F6C]" />
           </Link>
-          {/* <Link href="/saved">
-            <StarOutlined className="text-xl cursor-pointer text-[#002F6C]" />
-          </Link> */}
-          <Link href="/login">
-            <UserOutlined className="text-xl cursor-pointer text-[#002F6C]" />
-          </Link>
+          {user && (
+            <span className="text-[#002F6C] font-semibold">{user.first_name} {user.last_name}</span>
+          )}
+          {user ? (
+            <LogoutOutlined className="text-xl cursor-pointer text-[#002F6C]" onClick={handleLogout} />
+          ) : (
+            <Link href="/login">
+              <UserOutlined className="text-xl cursor-pointer text-[#002F6C]" />
+            </Link>
+          )}
         </div>
       </Header>
       <div style={{ borderBottom: "2px solid #002F6C" }}></div>
