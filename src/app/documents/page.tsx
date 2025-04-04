@@ -64,7 +64,7 @@ export default function DocumentsPage() {
     if (fileExtension === "pdf") {
       return (
         <iframe
-          src={selectedDocument.file}
+          src={encodeURI(selectedDocument.file)}
           width="100%"
           height="500px"
           title={selectedDocument.name}
