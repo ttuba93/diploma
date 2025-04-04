@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation"; // Добавляем редирект
 import { Layout, Spin, Alert, Modal, Button, Form, Input, Upload, message } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import HeaderSection from "./components/Header";
@@ -17,7 +18,25 @@ interface FAQ {
   course: number;
 }
 
+interface UserData {
+  first_name: string;
+  last_name: string;
+  email: string;
+  school: string;
+  speciality: string;
+  course: number;
+  telephone_number: string;
+}
+
+interface Student {
+  user_id: number;
+  username: string;
+  role: string;
+  user_data: UserData;
+}
+
 export default function Home() {
+  const router = useRouter(); // Для редиректа на логин
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,9 +44,11 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedFAQ, setSelectedFAQ] = useState<FAQ | null>(null);
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState<boolean>(false);
+  const [student, setStudent] = useState<Student | null>(null); // Данные студента
   const [form] = Form.useForm();
 
   useEffect(() => {
+    // Получаем вопросы
     axios
       .get("http://127.0.0.1:8000/api/faq/")
       .then((res) => {
@@ -38,27 +59,35 @@ export default function Home() {
         setError("Failed to fetch FAQs.");
         setLoading(false);
       });
+
+    // Получаем данные авторизованного пользователя (например, из localStorage)
+    const storedUser = localStorage.getItem("student");
+    if (storedUser) {
+      setStudent(JSON.parse(storedUser));
+    }
   }, []);
 
-  // Фильтрация по курсу
-  const filteredByCourse = selectedCourse === "All" 
-    ? faqs 
-    : selectedCourse === "5-7" 
-      ? faqs.filter((faq) => [5, 6, 7].includes(faq.course)) 
-      : faqs.filter((faq) => faq.course.toString() === selectedCourse);
+  const handleAskQuestionClick = () => {
+    if (!student) {
+      router.push("/login"); // Перенаправляем на логин, если не авторизован
+      return;
+    }
+    setIsQuestionModalOpen(true);
+  };
 
-  // Фильтрация по поисковому запросу (ищет в вопросе и ответе, без учета регистра)
-  const filteredFaqs = filteredByCourse.filter(
-    (faq) =>
-      faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Отправка нового вопроса на бекенд
+  // Отправка вопроса
   const handleSubmit = (values: { topic: string; description: string }) => {
+    if (!student) {
+      message.error("Вы должны быть авторизованы!");
+      return;
+    }
+
     axios
       .post("http://127.0.0.1:8000/api/faq-requests/create/", {
-        student: 1, // ID студента (можно передавать через авторизацию)
+        student_id: student.user_id, // ID студента
+        first_name: student.user_data.first_name,
+        last_name: student.user_data.last_name,
+        course: student.user_data.course,
         topic: values.topic,
         description: values.description,
       })
@@ -104,8 +133,8 @@ export default function Home() {
           </div>
         ) : error ? (
           <Alert message="Error" description={error} type="error" showIcon />
-        ) : filteredFaqs.length > 0 ? (
-          filteredFaqs.map((faq) => (
+        ) : faqs.length > 0 ? (
+          faqs.map((faq) => (
             <div 
               key={faq.id}
               onClick={() => setSelectedFAQ(faq)}
@@ -120,12 +149,12 @@ export default function Home() {
         )}
       </Content>
 
-      {/* Кнопка "Задать вопрос" внизу страницы */}
+      {/* Кнопка "Задать вопрос" */}
       <div className="text-center my-6">
         <Button
           type="primary"
           className="bg-blue-900 hover:bg-blue-700"
-          onClick={() => setIsQuestionModalOpen(true)}
+          onClick={handleAskQuestionClick}
         >
           Задать свой вопрос
         </Button>
@@ -149,24 +178,11 @@ export default function Home() {
         footer={null}
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Form.Item
-            label="Тема"
-            name="topic"
-            rules={[{ required: true, message: "Введите тему вопроса!" }]}
-          >
+          <Form.Item label="Тема" name="topic" rules={[{ required: true, message: "Введите тему вопроса!" }]}>
             <Input />
           </Form.Item>
-          <Form.Item
-            label="Описание"
-            name="description"
-            rules={[{ required: true, message: "Введите описание!" }]}
-          >
+          <Form.Item label="Описание" name="description" rules={[{ required: true, message: "Введите описание!" }]}>
             <Input.TextArea rows={4} />
-          </Form.Item>
-          <Form.Item label="Загрузить документ (необязательно)" name="document" valuePropName="fileList" getValueFromEvent={(e) => e.fileList}>
-            <Upload beforeUpload={() => false} maxCount={1}>
-              <Button icon={<UploadOutlined />}>Выберите файл</Button>
-            </Upload>
           </Form.Item>
           <Button type="primary" htmlType="submit" className="w-full bg-blue-900 hover:bg-blue-700">
             Отправить вопрос

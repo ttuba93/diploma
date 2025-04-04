@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Layout, Spin, Alert, Modal, Button, Form, Input, Checkbox, Select, message } from "antd";
+import { Layout, Spin, Alert, Modal, Button, Form, Input, Checkbox, message } from "antd";
 import axios from "axios";
 
 import HeaderSection from "../components/Header";
-import {Footer} from "../components/Footer";
+import { Footer } from "../components/Footer";
+import SearchSection from "../components/SearchSection";
 
 const { Content } = Layout;
-const { Option } = Select;
 
 interface FAQRequest {
   id: number;
@@ -18,6 +18,9 @@ interface FAQRequest {
   is_answered: boolean;
   published: boolean;
   course?: number;
+  student_id: number;
+  first_name: string;
+  last_name: string;
 }
 
 export default function ManagerPage() {
@@ -66,14 +69,21 @@ export default function ManagerPage() {
       });
   };
 
-  const unanswered = requests.filter((faq) => !faq.is_answered);
-  const answered = requests.filter((faq) => faq.is_answered);
+  // Фильтрация вопросов по курсу
+  const filteredRequests = selectedCourse === "All"
+    ? requests
+    : requests.filter(faq =>
+        faq.course ? (selectedCourse === "5-7" ? faq.course >= 5 : faq.course === Number(selectedCourse)) : false
+      );
+
+  const unanswered = filteredRequests.filter((faq) => !faq.is_answered);
+  const answered = filteredRequests.filter((faq) => faq.is_answered);
 
   return (
     <Layout className="min-h-screen">
       <HeaderSection />
-
-      {/* Course filter */}
+      <SearchSection/>
+      {/* Фильтр по курсам */}
       <section className="text-center py-6 border-b">
         <div className="flex justify-center gap-4 flex-wrap">
           {["All", "1", "2", "3", "4", "5-7"].map((course) => (
@@ -101,7 +111,7 @@ export default function ManagerPage() {
           <Alert message="Error" description={error} type="error" showIcon />
         ) : (
           <>
-            {/* Unanswered Questions */}
+            {/* Неотвеченные вопросы */}
             <h2 className="text-xl font-semibold my-4">Unanswered Questions</h2>
             {unanswered.length > 0 ? (
               unanswered.map((faq) => (
@@ -111,6 +121,9 @@ export default function ManagerPage() {
                 >
                   <strong>{faq.topic}</strong>
                   <p className="text-gray-600">{faq.description}</p>
+                  <p className="mt-2 text-sm text-gray-500">
+                    Asked by: {faq.first_name} {faq.last_name} (ID: {faq.student_id}, Course: {faq.course})
+                  </p>
                   <Button
                     type="primary"
                     className="mt-2 bg-blue-900 hover:bg-blue-700"
@@ -127,7 +140,7 @@ export default function ManagerPage() {
               <p className="text-center text-gray-500">No unanswered questions.</p>
             )}
 
-            {/* Answered Questions */}
+            {/* Отвеченные вопросы */}
             <h2 className="text-xl font-semibold my-4">Answered Questions</h2>
             {answered.length > 0 ? (
               answered.map((faq) => (
@@ -138,6 +151,9 @@ export default function ManagerPage() {
                   <strong>{faq.topic}</strong>
                   <p className="text-gray-600">{faq.description}</p>
                   <p className="mt-2"><strong>Answer:</strong> {faq.answer}</p>
+                  <p className="mt-2 text-sm text-gray-500">
+                    Asked by: {faq.first_name} {faq.last_name} (ID: {faq.student_id}, Course: {faq.course})
+                  </p>
                   <Button
                     type="default"
                     className="mt-2"
@@ -158,7 +174,7 @@ export default function ManagerPage() {
         )}
       </Content>
 
-      {/* Answer Modal */}
+      {/* Модальное окно для ответа */}
       <Modal
         title={selectedFAQ?.is_answered ? "Edit Answer" : "Answer Question"}
         open={isAnswerModalOpen}

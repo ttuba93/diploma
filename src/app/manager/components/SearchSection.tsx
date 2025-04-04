@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Input, List, Spin, Alert, Button, Modal, Form, message, Upload } from "antd";
-import { UploadOutlined } from "@ant-design/icons";
+import { useState, useEffect, useRef } from "react";
+import { Input, List, Spin, Alert, Button, Modal, Form } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import axios from "axios";
 
@@ -18,9 +17,10 @@ export default function SearchSection() {
   const [filteredFaqs, setFilteredFaqs] = useState<FAQ[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState<boolean>(false);
   const [selectedFAQ, setSelectedFAQ] = useState<FAQ | null>(null);
+  const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -51,126 +51,103 @@ export default function SearchSection() {
     }
   }, [searchQuery, faqs]);
 
-  // Открытие вопроса в модальном окне
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setIsSearchFocused(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [searchContainerRef]);
+
   const openQuestionModal = (faq: FAQ) => {
     setSelectedFAQ(faq);
     setIsQuestionModalOpen(true);
-  };
-
-  // Отправка нового вопроса на бекенд
-  const handleSubmit = (values: { topic: string; description: string }) => {
-    axios
-      .post("http://127.0.0.1:8000/api/faq-requests/create/", {
-        student: 1, // ID студента (можно передавать через авторизацию)
-        topic: values.topic,
-        description: values.description,
-      })
-      .then(() => {
-        message.success("Ваш вопрос отправлен менеджерам деканата!");
-        setIsModalOpen(false);
-        form.resetFields();
-      })
-      .catch(() => {
-        message.error("Ошибка при отправке вопроса!");
-      });
+    setIsSearchFocused(false);
   };
 
   return (
-    <section
-      className="relative text-center flex flex-col justify-center items-center h-[70vh] bg-cover bg-center"
-      style={{ backgroundImage: "url('/images/kbtu.png')" }}
-    >
-      <div className="absolute w-3/4 h-2/3 bg-blue-900 bg-opacity-50 rounded-xl flex flex-col justify-center items-center p-6">
-        <h1 className="text-3xl font-semibold text-white">Your Questions, Answered</h1>
-        <div className="mt-4 w-3/4">
+    <section className="relative text-center flex flex-col justify-start items-center h-[25vh] bg-cover bg-center pt-10">
+      <div className="w-full max-w-2xl px-4">
+        <h1 className="text-4xl font-bold text-[#002F6C] mb-6">Frequently Asked Questions</h1>
+        <div ref={searchContainerRef} className="relative w-full">
           <Input
-            className="bg-white rounded-full px-4 py-2 text-lg w-full"
+            className="bg-white rounded-full px-6 py-3 text-lg w-full shadow-md"
             placeholder="Search your question..."
-            prefix={<SearchOutlined className="text-blue-900" />}
+            prefix={<SearchOutlined className="text-blue-900 text-xl mr-2" />}
             size="large"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => setIsSearchFocused(true)}
+            style={{
+              height: '50px',
+              borderColor: isSearchFocused ? '#1890ff' : '#d9d9d9',
+              boxShadow: isSearchFocused ? '0 0 0 2px rgba(24,144,255,0.2)' : 'none'
+            }}
           />
-        </div>
 
-        {/* Список найденных вопросов */}
-        <div className="mt-4 w-3/4 max-h-60 overflow-auto bg-white rounded-md p-2 shadow-lg">
-          {loading ? (
-            <Spin size="large" />
-          ) : error ? (
-            <Alert message="Error" description={error} type="error" showIcon />
-          ) : filteredFaqs.length > 0 ? (
-            <List
-              dataSource={filteredFaqs}
-              renderItem={(faq) => (
-                <List.Item
-                  className="cursor-pointer hover:bg-gray-100 transition-all duration-200"
-                  onClick={() => openQuestionModal(faq)}
-                >
-                  <strong>{faq.question}</strong>
-                </List.Item>
+          {isSearchFocused && (
+            <div 
+              className="absolute mt-2 w-full max-h-48 overflow-auto bg-white rounded-lg p-2 shadow-lg z-10"
+              style={{ 
+                transition: 'all 0.3s ease',
+                opacity: isSearchFocused ? 1 : 0,
+                transform: isSearchFocused ? 'translateY(0)' : 'translateY(-10px)'
+              }}
+            >
+              {loading ? (
+                <div className="flex justify-center py-4">
+                  <Spin size="large" />
+                </div>
+              ) : error ? (
+                <Alert message="Error" description={error} type="error" showIcon />
+              ) : filteredFaqs.length > 0 ? (
+                <List
+                  dataSource={filteredFaqs}
+                  renderItem={(faq) => (
+                    <List.Item
+                      className="cursor-pointer hover:bg-gray-100 transition-all duration-200 rounded-md px-3"
+                      onClick={() => openQuestionModal(faq)}
+                    >
+                      <div className="w-full text-left py-1">
+                        <strong className="text-[#002F6C]">{faq.question}</strong>
+                      </div>
+                    </List.Item>
+                  )}
+                />
+              ) : (
+                <div className="py-4">
+                  <p className="text-gray-500 text-center">No results found. Try different keywords.</p>
+                </div>
               )}
-            />
-          ) : (
-            <>
-              <p className="text-gray-500 text-center">No results found.</p>
-              <Button
-                type="primary"
-                className="mt-4 bg-blue-900 hover:bg-blue-700"
-                onClick={() => setIsModalOpen(true)}
-              >
-                Задать свой вопрос
-              </Button>
-            </>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Модальное окно для отправки вопроса */}
       <Modal
-        title="Задать вопрос деканату"
-        open={isModalOpen}
-        onCancel={() => setIsModalOpen(false)}
-        footer={null}
-      >
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Form.Item
-            label="Тема"
-            name="topic"
-            rules={[{ required: true, message: "Введите тему вопроса!" }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            label="Описание"
-            name="description"
-            rules={[{ required: true, message: "Введите описание!" }]}
-          >
-            <Input.TextArea rows={4} />
-          </Form.Item>
-          <Form.Item label="Загрузить документ (необязательно)" name="document" valuePropName="fileList" getValueFromEvent={(e) => e.fileList}>
-            <Upload beforeUpload={() => false} maxCount={1}>
-              <Button icon={<UploadOutlined />}>Выберите файл</Button>
-            </Upload>
-          </Form.Item>
-          <Button type="primary" htmlType="submit" className="w-full bg-blue-900 hover:bg-blue-700">
-            Отправить вопрос
-          </Button>
-        </Form>
-      </Modal>
-
-      {/* Модальное окно для просмотра найденного вопроса */}
-      <Modal
-        title={selectedFAQ?.question}
+        title={<div className="text-xl text-[#002F6C] font-semibold">{selectedFAQ?.question}</div>}
         open={isQuestionModalOpen}
         onCancel={() => setIsQuestionModalOpen(false)}
+        width={600}
         footer={[
-          <Button key="close" onClick={() => setIsQuestionModalOpen(false)}>
-            Закрыть
+          <Button 
+            key="close" 
+            onClick={() => setIsQuestionModalOpen(false)}
+            type="primary"
+            style={{ backgroundColor: '#002F6C', borderColor: '#002F6C' }}
+            size="large"
+          >
+            Close
           </Button>,
         ]}
+        bodyStyle={{ padding: '20px' }}
       >
-        <p>{selectedFAQ?.answer}</p>
+        <p className="text-base leading-relaxed">{selectedFAQ?.answer}</p>
       </Modal>
     </section>
   );
