@@ -74,22 +74,33 @@ export default function HeaderSection() {
           </Menu.Item>
         </Menu>
         <div className="flex gap-4 items-center">
+          {/* <Dropdown overlay={languageMenu} placement="bottomRight">
+            <GlobalOutlined className="text-xl cursor-pointer text-[#002F6C]" />
+          </Dropdown>
+          <Link href="/notifications">
+            <BellOutlined className="text-xl cursor-pointer text-[#002F6C]" />
+          </Link> */}
+          {user && (
+            <span className="text-[#002F6C] font-semibold">{user.first_name} {user.last_name}</span>
+          )}
+          {user ? (
+            <>
+              <Link href="/profile">
+                <UserOutlined className="text-xl cursor-pointer text-[#002F6C]" />
+              </Link>
+              <LogoutOutlined className="text-xl cursor-pointer text-[#002F6C]" onClick={handleLogout} />
+            </>
+          ) : (
+            <Link href="/login">
+              <UserOutlined className="text-xl cursor-pointer text-[#002F6C]" />
+            </Link>
+          )}
           <Dropdown overlay={languageMenu} placement="bottomRight">
             <GlobalOutlined className="text-xl cursor-pointer text-[#002F6C]" />
           </Dropdown>
           <Link href="/notifications">
             <BellOutlined className="text-xl cursor-pointer text-[#002F6C]" />
           </Link>
-          {user && (
-            <span className="text-[#002F6C] font-semibold">{user.first_name} {user.last_name}</span>
-          )}
-          {user ? (
-            <LogoutOutlined className="text-xl cursor-pointer text-[#002F6C]" onClick={handleLogout} />
-          ) : (
-            <Link href="/login">
-              <UserOutlined className="text-xl cursor-pointer text-[#002F6C]" />
-            </Link>
-          )}
         </div>
       </Header>
       <div style={{ borderBottom: "2px solid #002F6C" }}></div>
