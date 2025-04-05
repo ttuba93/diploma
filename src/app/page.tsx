@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation"; // Добавляем редирект
-import { Layout, Spin, Alert, Modal, Button, Form, Input, Upload, message } from "antd";
+import { useRouter } from "next/navigation";
+import { Layout, Spin, Alert, Modal, Button, Form, Input, message } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import HeaderSection from "./components/Header";
 import SearchSection from "./components/SearchSection";
@@ -36,19 +36,17 @@ interface Student {
 }
 
 export default function Home() {
-  const router = useRouter(); // Для редиректа на логин
+  const router = useRouter();
   const [faqs, setFaqs] = useState<FAQ[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<string>("All");
-  const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedFAQ, setSelectedFAQ] = useState<FAQ | null>(null);
-  const [isQuestionModalOpen, setIsQuestionModalOpen] = useState<boolean>(false);
-  const [student, setStudent] = useState<Student | null>(null); // Данные студента
+  const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
+  const [student, setStudent] = useState<Student | null>(null);
   const [form] = Form.useForm();
 
   useEffect(() => {
-    // Получаем вопросы
     axios
       .get("http://127.0.0.1:8000/api/faq/")
       .then((res) => {
@@ -60,7 +58,6 @@ export default function Home() {
         setLoading(false);
       });
 
-    // Получаем данные авторизованного пользователя (например, из localStorage)
     const storedUser = localStorage.getItem("student");
     if (storedUser) {
       setStudent(JSON.parse(storedUser));
@@ -68,14 +65,15 @@ export default function Home() {
   }, []);
 
   const handleAskQuestionClick = () => {
-    if (!student) {
-      router.push("/login"); // Перенаправляем на логин, если не авторизован
+    const storedUser = localStorage.getItem("student");
+    if (!storedUser) {
+      router.push("/login");
       return;
     }
+    setStudent(JSON.parse(storedUser));
     setIsQuestionModalOpen(true);
   };
 
-  // Отправка вопроса
   const handleSubmit = (values: { topic: string; description: string }) => {
     if (!student) {
       message.error("Вы должны быть авторизованы!");
@@ -84,7 +82,7 @@ export default function Home() {
 
     axios
       .post("http://127.0.0.1:8000/api/faq-requests/create/", {
-        student_id: student.user_id, // ID студента
+        student_id: student.user_id,
         first_name: student.user_data.first_name,
         last_name: student.user_data.last_name,
         course: student.user_data.course,
@@ -106,7 +104,7 @@ export default function Home() {
       <HeaderSection />
       <SearchSection />
 
-      {/* Фильтр категорий */}
+      {/* Course filter */}
       <section className="text-center py-6 border-b">
         <div className="flex justify-center gap-4 flex-wrap">
           {["All", "1", "2", "3", "4", "5-7"].map((course) => (
@@ -125,7 +123,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Вопросы и ответы */}
       <Content className="p-6 max-w-4xl mx-auto w-full">
         {loading ? (
           <div className="flex justify-center">
@@ -135,7 +132,7 @@ export default function Home() {
           <Alert message="Error" description={error} type="error" showIcon />
         ) : faqs.length > 0 ? (
           faqs.map((faq) => (
-            <div 
+            <div
               key={faq.id}
               onClick={() => setSelectedFAQ(faq)}
               className="p-4 border rounded-lg my-2 cursor-pointer hover:bg-gray-100 transition-all duration-200"
@@ -149,7 +146,6 @@ export default function Home() {
         )}
       </Content>
 
-      {/* Кнопка "Задать вопрос" */}
       <div className="text-center my-6">
         <Button
           type="primary"
@@ -160,7 +156,6 @@ export default function Home() {
         </Button>
       </div>
 
-      {/* Модальное окно для просмотра ответа */}
       <Modal
         title={selectedFAQ?.question}
         open={!!selectedFAQ}
@@ -170,7 +165,6 @@ export default function Home() {
         <p>{selectedFAQ?.answer}</p>
       </Modal>
 
-      {/* Модальное окно для отправки нового вопроса */}
       <Modal
         title="Задать вопрос деканату"
         open={isQuestionModalOpen}
@@ -178,13 +172,25 @@ export default function Home() {
         footer={null}
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Form.Item label="Тема" name="topic" rules={[{ required: true, message: "Введите тему вопроса!" }]}>
+          <Form.Item
+            label="Тема"
+            name="topic"
+            rules={[{ required: true, message: "Введите тему вопроса!" }]}
+          >
             <Input />
           </Form.Item>
-          <Form.Item label="Описание" name="description" rules={[{ required: true, message: "Введите описание!" }]}>
+          <Form.Item
+            label="Описание"
+            name="description"
+            rules={[{ required: true, message: "Введите описание!" }]}
+          >
             <Input.TextArea rows={4} />
           </Form.Item>
-          <Button type="primary" htmlType="submit" className="w-full bg-blue-900 hover:bg-blue-700">
+          <Button
+            type="primary"
+            htmlType="submit"
+            className="w-full bg-blue-900 hover:bg-blue-700"
+          >
             Отправить вопрос
           </Button>
         </Form>
