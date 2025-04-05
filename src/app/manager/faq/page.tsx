@@ -18,7 +18,7 @@ interface FAQRequest {
   is_answered: boolean;
   published: boolean;
   course?: number;
-  student_id: number;
+  kbtu_id: number; // Изменено с student_id на kbtu_id
   first_name: string;
   last_name: string;
 }
@@ -30,6 +30,7 @@ export default function ManagerPage() {
   const [selectedCourse, setSelectedCourse] = useState<string>("All");
   const [selectedFAQ, setSelectedFAQ] = useState<FAQRequest | null>(null);
   const [isAnswerModalOpen, setIsAnswerModalOpen] = useState<boolean>(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState<boolean>(false);
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -39,7 +40,8 @@ export default function ManagerPage() {
         setRequests(res.data);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error("Error fetching FAQ requests:", error);
         setError("Failed to fetch FAQ requests.");
         setLoading(false);
       });
@@ -64,9 +66,15 @@ export default function ManagerPage() {
         setIsAnswerModalOpen(false);
         form.resetFields();
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error("Error submitting answer:", error);
         message.error("Failed to submit the answer!");
       });
+  };
+
+  const handleViewDetails = (faq: FAQRequest) => {
+    setSelectedFAQ(faq);
+    setIsViewModalOpen(true);
   };
 
   // Фильтрация вопросов по курсу
@@ -117,23 +125,30 @@ export default function ManagerPage() {
               unanswered.map((faq) => (
                 <div
                   key={faq.id}
-                  className="p-4 border rounded-lg my-2 cursor-pointer hover:bg-gray-100 transition-all duration-200"
+                  className="p-4 border rounded-lg my-2 hover:bg-gray-100 transition-all duration-200"
                 >
                   <strong>{faq.topic}</strong>
                   <p className="text-gray-600">{faq.description}</p>
                   <p className="mt-2 text-sm text-gray-500">
-                    Asked by: {faq.first_name} {faq.last_name} (ID: {faq.student_id}, Course: {faq.course})
+                    Asked by: {faq.first_name} {faq.last_name} (KBTU ID: {faq.kbtu_id}, Course: {faq.course})
                   </p>
-                  <Button
-                    type="primary"
-                    className="mt-2 bg-blue-900 hover:bg-blue-700"
-                    onClick={() => {
-                      setSelectedFAQ(faq);
-                      setIsAnswerModalOpen(true);
-                    }}
-                  >
-                    Answer
-                  </Button>
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      type="primary"
+                      className="bg-blue-900 hover:bg-blue-700"
+                      onClick={() => {
+                        setSelectedFAQ(faq);
+                        setIsAnswerModalOpen(true);
+                      }}
+                    >
+                      Answer
+                    </Button>
+                    <Button
+                      onClick={() => handleViewDetails(faq)}
+                    >
+                      View Details
+                    </Button>
+                  </div>
                 </div>
               ))
             ) : (
@@ -146,25 +161,31 @@ export default function ManagerPage() {
               answered.map((faq) => (
                 <div
                   key={faq.id}
-                  className="p-4 border rounded-lg my-2 cursor-pointer hover:bg-gray-100 transition-all duration-200"
+                  className="p-4 border rounded-lg my-2 hover:bg-gray-100 transition-all duration-200"
                 >
                   <strong>{faq.topic}</strong>
                   <p className="text-gray-600">{faq.description}</p>
                   <p className="mt-2"><strong>Answer:</strong> {faq.answer}</p>
                   <p className="mt-2 text-sm text-gray-500">
-                    Asked by: {faq.first_name} {faq.last_name} (ID: {faq.student_id}, Course: {faq.course})
+                    Asked by: {faq.first_name} {faq.last_name} (KBTU ID: {faq.kbtu_id}, Course: {faq.course})
                   </p>
-                  <Button
-                    type="default"
-                    className="mt-2"
-                    onClick={() => {
-                      setSelectedFAQ(faq);
-                      setIsAnswerModalOpen(true);
-                      form.setFieldsValue({ answer: faq.answer, published: faq.published });
-                    }}
-                  >
-                    Edit
-                  </Button>
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      type="default"
+                      onClick={() => {
+                        setSelectedFAQ(faq);
+                        setIsAnswerModalOpen(true);
+                        form.setFieldsValue({ answer: faq.answer, published: faq.published });
+                      }}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      onClick={() => handleViewDetails(faq)}
+                    >
+                      View Details
+                    </Button>
+                  </div>
                 </div>
               ))
             ) : (
@@ -174,6 +195,34 @@ export default function ManagerPage() {
         )}
       </Content>
 
+      {/* Модальное окно для просмотра деталей студента */}
+      <Modal
+        title="Student Details"
+        open={isViewModalOpen}
+        onCancel={() => setIsViewModalOpen(false)}
+        footer={[
+          <Button key="close" onClick={() => setIsViewModalOpen(false)}>
+            Close
+          </Button>
+        ]}
+      >
+        {selectedFAQ && (
+          <div className="p-4 border rounded bg-gray-50">
+            <h3 className="font-bold text-lg mb-2">Question Information</h3>
+            <p><strong>Topic:</strong> {selectedFAQ.topic}</p>
+            <p><strong>Description:</strong> {selectedFAQ.description}</p>
+            {selectedFAQ.is_answered && (
+              <p><strong>Answer:</strong> {selectedFAQ.answer}</p>
+            )}
+            
+            <h3 className="font-bold text-lg mt-4 mb-2">Student Information</h3>
+            <p><strong>KBTU ID:</strong> {selectedFAQ.kbtu_id}</p>
+            <p><strong>Name:</strong> {selectedFAQ.first_name} {selectedFAQ.last_name}</p>
+            <p><strong>Course:</strong> {selectedFAQ.course}</p>
+          </div>
+        )}
+      </Modal>
+
       {/* Модальное окно для ответа */}
       <Modal
         title={selectedFAQ?.is_answered ? "Edit Answer" : "Answer Question"}
@@ -181,6 +230,18 @@ export default function ManagerPage() {
         onCancel={() => setIsAnswerModalOpen(false)}
         footer={null}
       >
+        {selectedFAQ && (
+          <div className="mb-4 p-3 border rounded bg-gray-50">
+            <h3 className="font-semibold mb-2">Student Information</h3>
+            <p><strong>KBTU ID:</strong> {selectedFAQ.kbtu_id}</p>
+            <p><strong>Name:</strong> {selectedFAQ.first_name} {selectedFAQ.last_name}</p>
+            <p><strong>Course:</strong> {selectedFAQ.course}</p>
+            
+            <h3 className="font-semibold mt-3 mb-2">Question</h3>
+            <p><strong>Topic:</strong> {selectedFAQ.topic}</p>
+            <p><strong>Description:</strong> {selectedFAQ.description}</p>
+          </div>
+        )}
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item
             label="Your Answer"

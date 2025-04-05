@@ -26,6 +26,7 @@ interface UserData {
   speciality: string;
   course: number;
   telephone_number: string;
+  kbtu_id?: string; // Добавлено поле kbtu_id
 }
 
 interface Student {
@@ -67,6 +68,7 @@ export default function Home() {
   const handleAskQuestionClick = () => {
     const storedUser = localStorage.getItem("student");
     if (!storedUser) {
+      message.warning("You are not authorized as a student");
       router.push("/login");
       return;
     }
@@ -76,28 +78,41 @@ export default function Home() {
 
   const handleSubmit = (values: { topic: string; description: string }) => {
     if (!student) {
-      message.error("Вы должны быть авторизованы!");
+      message.error("You must be logged in to submit a question!");
       return;
     }
 
+    const formData = new FormData();
+    formData.append("topic", values.topic);
+    formData.append("description", values.description);
+    formData.append("kbtu_id", student.user_id.toString()); // Изменено student_id на kbtu_id
+    formData.append("first_name", student.user_data.first_name);
+    formData.append("last_name", student.user_data.last_name);
+    formData.append("course", student.user_data.course.toString());
+
     axios
-      .post("http://127.0.0.1:8000/api/faq-requests/create/", {
-        student_id: student.user_id,
-        first_name: student.user_data.first_name,
-        last_name: student.user_data.last_name,
-        course: student.user_data.course,
-        topic: values.topic,
-        description: values.description,
+      .post("http://127.0.0.1:8000/api/faq-requests/create/", formData, {
+        headers: {
+          Authorization: `Token ${localStorage.getItem("token")}`,
+        },
       })
       .then(() => {
-        message.success("Ваш вопрос отправлен менеджерам деканата!");
+        message.success("Your question has been submitted to the managers!");
         setIsQuestionModalOpen(false);
         form.resetFields();
       })
-      .catch(() => {
-        message.error("Ошибка при отправке вопроса!");
+      .catch((error) => {
+        console.error("Error submitting question:", error);
+        message.error("Failed to submit question!");
       });
   };
+
+  // Фильтрация FAQ по курсу
+  const filteredFaqs = selectedCourse === "All"
+    ? faqs
+    : faqs.filter(faq =>
+        selectedCourse === "5-7" ? faq.course >= 5 : faq.course === Number(selectedCourse)
+      );
 
   return (
     <Layout className="min-h-screen">
@@ -130,8 +145,8 @@ export default function Home() {
           </div>
         ) : error ? (
           <Alert message="Error" description={error} type="error" showIcon />
-        ) : faqs.length > 0 ? (
-          faqs.map((faq) => (
+        ) : filteredFaqs.length > 0 ? (
+          filteredFaqs.map((faq) => (
             <div
               key={faq.id}
               onClick={() => setSelectedFAQ(faq)}
@@ -152,7 +167,7 @@ export default function Home() {
           className="bg-blue-900 hover:bg-blue-700"
           onClick={handleAskQuestionClick}
         >
-          Задать свой вопрос
+          Ask a question
         </Button>
       </div>
 
@@ -166,23 +181,29 @@ export default function Home() {
       </Modal>
 
       <Modal
-        title="Задать вопрос деканату"
+        title="Ask the Dean's Office a Question"
         open={isQuestionModalOpen}
         onCancel={() => setIsQuestionModalOpen(false)}
         footer={null}
       >
+        <div className="mb-4 p-2 border rounded">
+          <p><strong>KBTU ID:</strong> {student?.user_id}</p>
+          <p><strong>Full Name:</strong> {student?.user_data.last_name} {student?.user_data.first_name}</p>
+          <p><strong>Course:</strong> {student?.user_data.course}</p>
+        </div>
+
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item
-            label="Тема"
+            label="Topic"
             name="topic"
-            rules={[{ required: true, message: "Введите тему вопроса!" }]}
+            rules={[{ required: true, message: "Please enter a topic!" }]}
           >
             <Input />
           </Form.Item>
           <Form.Item
-            label="Описание"
+            label="Description"
             name="description"
-            rules={[{ required: true, message: "Введите описание!" }]}
+            rules={[{ required: true, message: "Please enter a description!" }]}
           >
             <Input.TextArea rows={4} />
           </Form.Item>
@@ -191,7 +212,7 @@ export default function Home() {
             htmlType="submit"
             className="w-full bg-blue-900 hover:bg-blue-700"
           >
-            Отправить вопрос
+            Submit Question
           </Button>
         </Form>
       </Modal>
