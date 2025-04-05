@@ -19,6 +19,7 @@ interface FAQ {
 }
 
 interface UserData {
+  id: number;
   first_name: string;
   last_name: string;
   email: string;
@@ -26,7 +27,7 @@ interface UserData {
   speciality: string;
   course: number;
   telephone_number: string;
-  kbtu_id?: string;
+  kbtu_id: string;
 }
 
 interface Student {
@@ -173,12 +174,14 @@ export default function Home() {
     console.log("Submitting question with student data:", student);
 
     const formData = new FormData();
-    formData.append("topic", values.topic);
-    formData.append("description", values.description);
-    formData.append("kbtu_id", student.user_id.toString());
-    formData.append("first_name", student.user_data.first_name);
-    formData.append("last_name", student.user_data.last_name);
-    formData.append("course", student.user_data.course.toString());
+     formData.append("student", student.user_data.id.toString());
+     formData.append("topic", values.topic);
+     formData.append("description", values.description);
+    // formData.append("kbtu_id", student.user_data.kbtu_id);
+    // formData.append("first_name", student.user_data.first_name);
+    // formData.append("last_name", student.user_data.last_name);
+    // formData.append("course", student.user_data.course.toString());
+   
 
     // Проверяем все значения, которые отправляем
     for (const pair of formData.entries()) {
@@ -286,7 +289,7 @@ export default function Home() {
       >
         {student ? (
           <div className="mb-4 p-2 border rounded">
-            <p><strong>KBTU ID:</strong> {student.user_id}</p>
+            <p><strong>KBTU ID:</strong> {student.user_data.kbtu_id}</p>
             <p><strong>Full Name:</strong> {student.user_data?.last_name || "N/A"} {student.user_data?.first_name || "N/A"}</p>
             <p><strong>Course:</strong> {student.user_data?.course || "N/A"}</p>
           </div>

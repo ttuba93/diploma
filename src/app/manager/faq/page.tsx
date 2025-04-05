@@ -16,10 +16,15 @@ interface FAQRequest {
   answer?: string;
   is_answered: boolean;
   published: boolean;
-  course?: number;
-  kbtu_id: number; // Изменено с student_id на kbtu_id
-  first_name: string;
-  last_name: string;
+  course: number;
+  student: {
+    first_name: string;
+    last_name: string;
+    kbtu_id: string;
+    course: number;
+    speciality: string;
+  };
+  created_at: string;
 }
 
 export default function ManagerPage() {
@@ -89,7 +94,7 @@ export default function ManagerPage() {
   return (
     <Layout className="min-h-screen">
       <HeaderSection />
-      <SearchSection/>
+      <SearchSection />
       {/* Фильтр по курсам */}
       <section className="text-center py-6 border-b">
         <div className="flex justify-center gap-4 flex-wrap">
@@ -129,7 +134,7 @@ export default function ManagerPage() {
                   <strong>{faq.topic}</strong>
                   <p className="text-gray-600">{faq.description}</p>
                   <p className="mt-2 text-sm text-gray-500">
-                    Asked by: {faq.first_name} {faq.last_name} (KBTU ID: {faq.kbtu_id}, Course: {faq.course})
+                    Asked by: {faq.student.first_name} {faq.student.last_name} (KBTU ID: {faq.student.kbtu_id}, Course: {faq.student.course})
                   </p>
                   <div className="flex gap-2 mt-2">
                     <Button
@@ -166,7 +171,7 @@ export default function ManagerPage() {
                   <p className="text-gray-600">{faq.description}</p>
                   <p className="mt-2"><strong>Answer:</strong> {faq.answer}</p>
                   <p className="mt-2 text-sm text-gray-500">
-                    Asked by: {faq.first_name} {faq.last_name} (KBTU ID: {faq.kbtu_id}, Course: {faq.course})
+                    Asked by: {faq.student.first_name} {faq.student.last_name} (KBTU ID: {faq.student.kbtu_id}, Course: {faq.student.course})
                   </p>
                   <div className="flex gap-2 mt-2">
                     <Button
@@ -215,9 +220,9 @@ export default function ManagerPage() {
             )}
             
             <h3 className="font-bold text-lg mt-4 mb-2">Student Information</h3>
-            <p><strong>KBTU ID:</strong> {selectedFAQ.kbtu_id}</p>
-            <p><strong>Name:</strong> {selectedFAQ.first_name} {selectedFAQ.last_name}</p>
-            <p><strong>Course:</strong> {selectedFAQ.course}</p>
+            <p><strong>KBTU ID:</strong> {selectedFAQ.student.kbtu_id}</p>
+            <p><strong>Name:</strong> {selectedFAQ.student.first_name} {selectedFAQ.student.last_name}</p>
+            <p><strong>Course:</strong> {selectedFAQ.student.course}</p>
           </div>
         )}
       </Modal>
@@ -232,9 +237,9 @@ export default function ManagerPage() {
         {selectedFAQ && (
           <div className="mb-4 p-3 border rounded bg-gray-50">
             <h3 className="font-semibold mb-2">Student Information</h3>
-            <p><strong>KBTU ID:</strong> {selectedFAQ.kbtu_id}</p>
-            <p><strong>Name:</strong> {selectedFAQ.first_name} {selectedFAQ.last_name}</p>
-            <p><strong>Course:</strong> {selectedFAQ.course}</p>
+            <p><strong>KBTU ID:</strong> {selectedFAQ.student.kbtu_id}</p>
+            <p><strong>Name:</strong> {selectedFAQ.student.first_name} {selectedFAQ.student.last_name}</p>
+            <p><strong>Course:</strong> {selectedFAQ.student.course}</p>
             
             <h3 className="font-semibold mt-3 mb-2">Question</h3>
             <p><strong>Topic:</strong> {selectedFAQ.topic}</p>
