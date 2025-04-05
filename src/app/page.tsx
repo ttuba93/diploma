@@ -62,19 +62,40 @@ export default function Home() {
       });
 
     // Проверка авторизации при загрузке страницы
-    const token = localStorage.getItem("token");
+    checkAuthStatus();
+  }, []);
+
+  // Функция для проверки авторизации пользователя
+  const checkAuthStatus = () => {
     const storedUser = localStorage.getItem("student");
     
-    if (token && storedUser) {
-      setIsAuthenticated(true);
-      setStudent(JSON.parse(storedUser));
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        // Проверка валидности данных пользователя
+        if (parsedUser && parsedUser.user_id && parsedUser.user_data) {
+          setIsAuthenticated(true);
+          setStudent(parsedUser);
+        } else {
+          setIsAuthenticated(false);
+          setStudent(null);
+        }
+      } catch (e) {
+        console.error("Failed to parse user data:", e);
+        setIsAuthenticated(false);
+        setStudent(null);
+        localStorage.removeItem("student"); // Очистка некорректных данных
+      }
     } else {
       setIsAuthenticated(false);
       setStudent(null);
     }
-  }, []);
+  };
 
   const handleAskQuestionClick = () => {
+    // Повторная проверка авторизации на момент клика
+    checkAuthStatus();
+    
     // Проверяем авторизацию пользователя
     if (!isAuthenticated) {
       message.warning("You need to login first to ask a question");
@@ -87,14 +108,11 @@ export default function Home() {
   };
 
   const handleSubmit = (values: { topic: string; description: string }) => {
-    if (!student || !isAuthenticated) {
+    // Повторная проверка авторизации перед отправкой
+    checkAuthStatus();
+    
+    if (!isAuthenticated || !student) {
       message.error("You must be logged in to submit a question!");
-      return;
-    }
-
-    const token = localStorage.getItem("token");
-    if (!token) {
-      message.error("Authentication token not found. Please login again.");
       router.push("/login");
       return;
     }
@@ -107,12 +125,9 @@ export default function Home() {
     formData.append("last_name", student.user_data.last_name);
     formData.append("course", student.user_data.course.toString());
 
+    // Здесь отправка запроса без токена
     axios
-      .post("http://127.0.0.1:8000/api/faq-requests/create/", formData, {
-        headers: {
-          Authorization: `Token ${token}`,
-        },
-      })
+      .post("http://127.0.0.1:8000/api/faq-requests/create/", formData)
       .then(() => {
         message.success("Your question has been submitted to the managers!");
         setIsQuestionModalOpen(false);
@@ -120,7 +135,14 @@ export default function Home() {
       })
       .catch((error) => {
         console.error("Error submitting question:", error);
-        message.error("Failed to submit question: " + (error.response?.data?.message || "Unknown error"));
+        if (error.response?.status === 401) {
+          message.error("Your session has expired. Please login again.");
+          localStorage.removeItem("student");
+          setIsAuthenticated(false);
+          router.push("/login");
+        } else {
+          message.error("Failed to submit question: " + (error.response?.data?.message || "Unknown error"));
+        }
       });
   };
 
