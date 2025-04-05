@@ -182,7 +182,7 @@ export default function ManagerPage() {
       key: "status",
       width: 120,
       render: (_: unknown, record: FAQRequest) => {
-        const status = record.is_answered ? "answered" : "pending";
+        const status = record.is_answered ? "answered" : "unanswered";
         let color = status === "answered" ? "green" : "blue";
         return <Tag color={color}>{status.toUpperCase()}</Tag>;
       },
@@ -245,7 +245,7 @@ export default function ManagerPage() {
               onChange={(value: string) => setStatusFilter(value)}
             >
               <Option value="all">All Statuses</Option>
-              <Option value="pending">Pending</Option>
+              <Option value="unanswered">Unanswered</Option>
               <Option value="answered">Answered</Option>
             </Select>
             
@@ -276,7 +276,7 @@ export default function ManagerPage() {
 
           {/* Summary */}
           <div className="flex gap-4 mb-6">
-            <Badge.Ribbon text="Pending" color="blue">
+            <Badge.Ribbon text="Unanswered" color="blue">
               <div className="bg-blue-50 p-4 rounded-lg min-w-32">
                 <Title level={4} className="mt-0">
                   {requests.filter(req => !req.is_answered).length}
