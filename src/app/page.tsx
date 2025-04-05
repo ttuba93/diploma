@@ -45,8 +45,14 @@ export default function Home() {
   const [selectedFAQ, setSelectedFAQ] = useState<FAQ | null>(null);
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
   const [student, setStudent] = useState<Student | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [form] = Form.useForm();
+
+  // Эта функция будет выполняться при каждом рендере компонента
+  // для отладки данных пользователя
+  useEffect(() => {
+    console.log("Current student state:", student);
+    console.log("localStorage student:", localStorage.getItem("student"));
+  }, [student]);
 
   useEffect(() => {
     // Получение данных FAQ
@@ -61,43 +67,85 @@ export default function Home() {
         setLoading(false);
       });
 
-    // Проверка авторизации при загрузке страницы
-    checkAuthStatus();
+    // ВАЖНО: Сначала выводим в консоль все, что есть в localStorage
+    console.log("All localStorage items:");
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        console.log(`${key}: ${localStorage.getItem(key)}`);
+      }
+    }
+
+    // Получение данных пользователя из localStorage
+    loadUserData();
+
+    // Добавляем обработчик для события storage, чтобы обновлять данные
+    // когда они изменяются в другой вкладке
+    window.addEventListener('storage', loadUserData);
+    
+    return () => {
+      window.removeEventListener('storage', loadUserData);
+    };
   }, []);
 
-  // Функция для проверки авторизации пользователя
-  const checkAuthStatus = () => {
-    const storedUser = localStorage.getItem("student");
-    
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        // Проверка валидности данных пользователя
-        if (parsedUser && parsedUser.user_id && parsedUser.user_data) {
-          setIsAuthenticated(true);
+  // Выносим загрузку данных пользователя в отдельную функцию
+  const loadUserData = () => {
+    try {
+      // Проверяем разные возможные ключи для данных пользователя
+      let userData = localStorage.getItem("student");
+      
+      if (!userData) {
+        // Пробуем другие возможные ключи
+        userData = localStorage.getItem("user");
+      }
+      
+      if (!userData) {
+        // Проверяем все ключи в localStorage на содержание данных пользователя
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key) {
+            const value = localStorage.getItem(key);
+            if (value && value.includes('"user_id"') && value.includes('"user_data"')) {
+              userData = value;
+              console.log(`Found user data in key: ${key}`);
+              break;
+            }
+          }
+        }
+      }
+
+      if (userData) {
+        const parsedUser = JSON.parse(userData);
+        console.log("Parsed user data:", parsedUser);
+        
+        // Проверяем структуру данных
+        if (parsedUser && parsedUser.user_id) {
           setStudent(parsedUser);
+          console.log("Student data set successfully");
         } else {
-          setIsAuthenticated(false);
+          console.error("Invalid user data structure:", parsedUser);
           setStudent(null);
         }
-      } catch (e) {
-        console.error("Failed to parse user data:", e);
-        setIsAuthenticated(false);
+      } else {
+        console.log("No user data found in localStorage");
         setStudent(null);
-        localStorage.removeItem("student"); // Очистка некорректных данных
       }
-    } else {
-      setIsAuthenticated(false);
+    } catch (error) {
+      console.error("Error loading user data:", error);
       setStudent(null);
     }
   };
 
+  const isAuthenticated = () => {
+    return student !== null && student.user_id !== undefined;
+  };
+
   const handleAskQuestionClick = () => {
-    // Повторная проверка авторизации на момент клика
-    checkAuthStatus();
+    console.log("Ask question clicked, authentication status:", isAuthenticated());
+    console.log("Current student data:", student);
     
-    // Проверяем авторизацию пользователя
-    if (!isAuthenticated) {
+    // Если пользователь не авторизован, перенаправляем на страницу входа
+    if (!isAuthenticated()) {
       message.warning("You need to login first to ask a question");
       router.push("/login");
       return;
@@ -108,41 +156,47 @@ export default function Home() {
   };
 
   const handleSubmit = (values: { topic: string; description: string }) => {
-    // Повторная проверка авторизации перед отправкой
-    checkAuthStatus();
-    
-    if (!isAuthenticated || !student) {
+    // Проверяем авторизацию пользователя
+    if (!isAuthenticated()) {
       message.error("You must be logged in to submit a question!");
       router.push("/login");
       return;
     }
 
+    // Проверяем, что данные студента загружены корректно
+    if (!student || !student.user_data) {
+      message.error("User data is incomplete. Please login again.");
+      router.push("/login");
+      return;
+    }
+
+    console.log("Submitting question with student data:", student);
+
     const formData = new FormData();
     formData.append("topic", values.topic);
     formData.append("description", values.description);
-    formData.append("kbtu_id", student.user_id.toString()); 
+    formData.append("kbtu_id", student.user_id.toString());
     formData.append("first_name", student.user_data.first_name);
     formData.append("last_name", student.user_data.last_name);
     formData.append("course", student.user_data.course.toString());
 
-    // Здесь отправка запроса без токена
+    // Проверяем все значения, которые отправляем
+    for (const pair of formData.entries()) {
+      console.log(`${pair[0]}: ${pair[1]}`);
+    }
+
     axios
       .post("http://127.0.0.1:8000/api/faq-requests/create/", formData)
-      .then(() => {
+      .then((response) => {
+        console.log("Question submitted successfully:", response.data);
         message.success("Your question has been submitted to the managers!");
         setIsQuestionModalOpen(false);
         form.resetFields();
       })
       .catch((error) => {
         console.error("Error submitting question:", error);
-        if (error.response?.status === 401) {
-          message.error("Your session has expired. Please login again.");
-          localStorage.removeItem("student");
-          setIsAuthenticated(false);
-          router.push("/login");
-        } else {
-          message.error("Failed to submit question: " + (error.response?.data?.message || "Unknown error"));
-        }
+        console.error("Error response:", error.response);
+        message.error("Failed to submit question: " + (error.response?.data?.message || "Unknown error"));
       });
   };
 
@@ -208,6 +262,11 @@ export default function Home() {
         >
           Ask a question
         </Button>
+        
+        {/* Добавляем отладочную информацию */}
+        <div className="mt-4 text-xs text-gray-500">
+          Authentication status: {isAuthenticated() ? "Logged in" : "Not logged in"}
+        </div>
       </div>
 
       <Modal
@@ -225,12 +284,19 @@ export default function Home() {
         onCancel={() => setIsQuestionModalOpen(false)}
         footer={null}
       >
-        {student && (
+        {student ? (
           <div className="mb-4 p-2 border rounded">
             <p><strong>KBTU ID:</strong> {student.user_id}</p>
-            <p><strong>Full Name:</strong> {student.user_data.last_name} {student.user_data.first_name}</p>
-            <p><strong>Course:</strong> {student.user_data.course}</p>
+            <p><strong>Full Name:</strong> {student.user_data?.last_name || "N/A"} {student.user_data?.first_name || "N/A"}</p>
+            <p><strong>Course:</strong> {student.user_data?.course || "N/A"}</p>
           </div>
+        ) : (
+          <Alert 
+            message="User data not available" 
+            description="Please reload the page or log in again." 
+            type="warning" 
+            showIcon 
+          />
         )}
 
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
@@ -252,6 +318,7 @@ export default function Home() {
             type="primary"
             htmlType="submit"
             className="w-full bg-blue-900 hover:bg-blue-700"
+            disabled={!student}
           >
             Submit Question
           </Button>
