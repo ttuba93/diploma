@@ -26,7 +26,7 @@ interface UserData {
   speciality: string;
   course: number;
   telephone_number: string;
-  kbtu_id?: string; // Добавлено поле kbtu_id
+  kbtu_id?: string;
 }
 
 interface Student {
@@ -45,9 +45,11 @@ export default function Home() {
   const [selectedFAQ, setSelectedFAQ] = useState<FAQ | null>(null);
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
   const [student, setStudent] = useState<Student | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [form] = Form.useForm();
 
   useEffect(() => {
+    // Получение данных FAQ
     axios
       .get("http://127.0.0.1:8000/api/faq/")
       .then((res) => {
@@ -59,33 +61,48 @@ export default function Home() {
         setLoading(false);
       });
 
+    // Проверка авторизации при загрузке страницы
+    const token = localStorage.getItem("token");
     const storedUser = localStorage.getItem("student");
-    if (storedUser) {
+    
+    if (token && storedUser) {
+      setIsAuthenticated(true);
       setStudent(JSON.parse(storedUser));
+    } else {
+      setIsAuthenticated(false);
+      setStudent(null);
     }
   }, []);
 
   const handleAskQuestionClick = () => {
-    const storedUser = localStorage.getItem("student");
-    if (!storedUser) {
-      message.warning("You are not authorized as a student");
+    // Проверяем авторизацию пользователя
+    if (!isAuthenticated) {
+      message.warning("You need to login first to ask a question");
       router.push("/login");
       return;
     }
-    setStudent(JSON.parse(storedUser));
+    
+    // Если пользователь авторизован, открываем модальное окно
     setIsQuestionModalOpen(true);
   };
 
   const handleSubmit = (values: { topic: string; description: string }) => {
-    if (!student) {
+    if (!student || !isAuthenticated) {
       message.error("You must be logged in to submit a question!");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      message.error("Authentication token not found. Please login again.");
+      router.push("/login");
       return;
     }
 
     const formData = new FormData();
     formData.append("topic", values.topic);
     formData.append("description", values.description);
-    formData.append("kbtu_id", student.user_id.toString()); // Изменено student_id на kbtu_id
+    formData.append("kbtu_id", student.user_id.toString()); 
     formData.append("first_name", student.user_data.first_name);
     formData.append("last_name", student.user_data.last_name);
     formData.append("course", student.user_data.course.toString());
@@ -93,7 +110,7 @@ export default function Home() {
     axios
       .post("http://127.0.0.1:8000/api/faq-requests/create/", formData, {
         headers: {
-          Authorization: `Token ${localStorage.getItem("token")}`,
+          Authorization: `Token ${token}`,
         },
       })
       .then(() => {
@@ -103,7 +120,7 @@ export default function Home() {
       })
       .catch((error) => {
         console.error("Error submitting question:", error);
-        message.error("Failed to submit question!");
+        message.error("Failed to submit question: " + (error.response?.data?.message || "Unknown error"));
       });
   };
 
@@ -186,11 +203,13 @@ export default function Home() {
         onCancel={() => setIsQuestionModalOpen(false)}
         footer={null}
       >
-        <div className="mb-4 p-2 border rounded">
-          <p><strong>KBTU ID:</strong> {student?.user_id}</p>
-          <p><strong>Full Name:</strong> {student?.user_data.last_name} {student?.user_data.first_name}</p>
-          <p><strong>Course:</strong> {student?.user_data.course}</p>
-        </div>
+        {student && (
+          <div className="mb-4 p-2 border rounded">
+            <p><strong>KBTU ID:</strong> {student.user_id}</p>
+            <p><strong>Full Name:</strong> {student.user_data.last_name} {student.user_data.first_name}</p>
+            <p><strong>Course:</strong> {student.user_data.course}</p>
+          </div>
+        )}
 
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item

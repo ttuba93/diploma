@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Layout, Spin, Alert, Modal, Button, Form, Input, Checkbox, message } from "antd";
 import axios from "axios";
-
 import HeaderSection from "../components/Header";
 import { Footer } from "../components/Footer";
 import SearchSection from "../components/SearchSection";
