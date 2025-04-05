@@ -68,9 +68,9 @@ export default function HeaderSection() {
           <Menu.Item key="/manager/faq">
             <Link href="/manager/faq">HOME</Link>
           </Menu.Item>
-          <Menu.Item key="/manager/documents">
+          {/* <Menu.Item key="/manager/documents">
             <Link href="/manager/documents">Documents</Link>
-          </Menu.Item>
+          </Menu.Item> */}
           <Menu.Item key="/manager/e-queue">
             <Link href="/manager/e-queue">E-queue</Link>
           </Menu.Item>
