@@ -6,10 +6,6 @@ import HeaderSection from "../components/Header";
 import { Footer } from "../components/Footer";
 import SearchSection from "../components/SearchSectionDoc";
 import mammoth from "mammoth";
-// Импортируем компоненты из react-pdf
-import { Document, Page, pdfjs } from 'react-pdf';
-// Устанавливаем worker для PDF.js
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 const { Content } = Layout;
 
@@ -45,11 +41,6 @@ export default function DocumentsPage() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [docxContent, setDocxContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  
-  // Состояния для react-pdf
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState<number>(1);
-  const [pdfError, setPdfError] = useState<string | null>(null);
   
   // Form handling states
   const [isFormModalVisible, setIsFormModalVisible] = useState(false);
@@ -150,8 +141,6 @@ export default function DocumentsPage() {
   const showDocumentModal = async (doc: Document) => {
     setSelectedDocument(doc);
     setIsModalVisible(true);
-    setPageNumber(1); // Сбрасываем номер страницы
-    setPdfError(null); // Сбрасываем ошибки PDF
 
     const fileExtension = doc.file.split(".").pop()?.toLowerCase();
 
@@ -174,7 +163,6 @@ export default function DocumentsPage() {
   const handleCancel = () => {
     setIsModalVisible(false);
     setDocxContent(null);
-    setNumPages(null);
   };
 
   const handleFormCancel = () => {
@@ -185,29 +173,6 @@ export default function DocumentsPage() {
   const handleFilledDocCancel = () => {
     setShowFilledDocument(false);
     setFilledDocumentUrl(null);
-    setNumPages(null);
-    setPageNumber(1);
-  };
-
-  // Функции для перемещения по страницам PDF
-  const goToPrevPage = () => {
-    setPageNumber(prev => Math.max(prev - 1, 1));
-  };
-
-  const goToNextPage = () => {
-    setPageNumber(prev => Math.min(prev + 1, numPages || 1));
-  };
-
-  // Обработчик успешной загрузки PDF
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
-    setPdfError(null);
-  };
-
-  // Обработчик ошибки загрузки PDF
-  const onDocumentLoadError = (error: Error) => {
-    console.error("Error loading PDF:", error);
-    setPdfError("Failed to load PDF. Please try downloading the file instead.");
   };
 
   // Handles manual form filling - only for document IDs 1 and 5
@@ -314,7 +279,6 @@ export default function DocumentsPage() {
       // Set the filled document URL and show the document
       setFilledDocumentUrl(documentUrl);
       setShowFilledDocument(true);
-      setPageNumber(1); // Сбрасываем номер страницы при просмотре нового документа
       
       message.success('Document successfully filled!');
       setIsFormModalVisible(false);
@@ -334,98 +298,18 @@ export default function DocumentsPage() {
 
     if (fileExtension === "pdf") {
       return (
-        <div className="pdf-container" style={{ textAlign: 'center' }}>
-          <Document
-            file={selectedDocument.file}
-            onLoadSuccess={onDocumentLoadSuccess}
-            onLoadError={onDocumentLoadError}
-            loading={<Spin tip="Loading PDF..." />}
-            error={<div style={{ color: 'red' }}>{pdfError || "Failed to load PDF document"}</div>}
-          >
-            <Page 
-              pageNumber={pageNumber} 
-              renderTextLayer={false}
-              renderAnnotationLayer={false}
-              width={600}
-              scale={1.2}
-            />
-          </Document>
-          
-          {numPages && (
-            <div className="pdf-navigation" style={{ marginTop: '15px' }}>
-              <Button 
-                onClick={goToPrevPage} 
-                disabled={pageNumber <= 1}
-                style={{ marginRight: '10px' }}
-              >
-                Previous
-              </Button>
-              <span style={{ margin: '0 10px' }}>
-                Page {pageNumber} of {numPages}
-              </span>
-              <Button 
-                onClick={goToNextPage} 
-                disabled={pageNumber >= (numPages || 1)}
-                style={{ marginLeft: '10px' }}
-              >
-                Next
-              </Button>
-            </div>
-          )}
-        </div>
+        <iframe
+          src={encodeURI(selectedDocument.file)}
+          width="100%"
+          height="500px"
+          title={selectedDocument.name}
+        ></iframe>
       );
     } else if (fileExtension === "docx") {
-      return loading ? <Spin tip="Processing DOCX file..." /> : <div dangerouslySetInnerHTML={{ __html: docxContent || "" }} />;
+      return loading ? <Spin /> : <div dangerouslySetInnerHTML={{ __html: docxContent || "" }} />;
     } else {
-      return <p>Unsupported file format. Please download the file to view its contents.</p>;
+      return <p>Unsupported file format.</p>;
     }
-  };
-
-  // Компонент для просмотра заполненного PDF документа
-  const renderFilledDocumentViewer = () => {
-    if (!filledDocumentUrl) return null;
-    
-    return (
-      <div className="pdf-container" style={{ textAlign: 'center' }}>
-        <Document
-          file={filledDocumentUrl}
-          onLoadSuccess={onDocumentLoadSuccess}
-          onLoadError={onDocumentLoadError}
-          loading={<Spin tip="Loading filled document..." />}
-          error={<div style={{ color: 'red' }}>{pdfError || "Failed to load filled document"}</div>}
-        >
-          <Page 
-            pageNumber={pageNumber} 
-            renderTextLayer={false}
-            renderAnnotationLayer={false}
-            width={600}
-            scale={1.2}
-          />
-        </Document>
-        
-        {numPages && (
-          <div className="pdf-navigation" style={{ marginTop: '15px' }}>
-            <Button 
-              onClick={goToPrevPage} 
-              disabled={pageNumber <= 1}
-              style={{ marginRight: '10px' }}
-            >
-              Previous
-            </Button>
-            <span style={{ margin: '0 10px' }}>
-              Page {pageNumber} of {numPages}
-            </span>
-            <Button 
-              onClick={goToNextPage} 
-              disabled={pageNumber >= (numPages || 1)}
-              style={{ marginLeft: '10px' }}
-            >
-              Next
-            </Button>
-          </div>
-        )}
-      </div>
-    );
   };
 
   // Render form fields based on the selected document
@@ -596,7 +480,15 @@ export default function DocumentsPage() {
             </Button>
           ]}
         >
-          {renderFilledDocumentViewer()}
+          {filledDocumentUrl && (
+            <iframe
+              src={filledDocumentUrl}
+              width="100%"
+              height="600px"
+              title="Filled Document"
+              style={{ border: "none" }}
+            ></iframe>
+          )}
         </Modal>
         
         {/* Debug information */}
