@@ -36,14 +36,14 @@ export default function DocumentsPage() {
   const [docxContent, setDocxContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   
-  // New states for form handling
+  // Form handling states
   const [isFormModalVisible, setIsFormModalVisible] = useState(false);
   const [formMode, setFormMode] = useState<'manual' | 'auto'>('manual');
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [form] = Form.useForm();
   
-  // State for filled document display
+  // Filled document display states
   const [filledDocumentUrl, setFilledDocumentUrl] = useState<string | null>(null);
   const [showFilledDocument, setShowFilledDocument] = useState(false);
 
@@ -122,24 +122,28 @@ export default function DocumentsPage() {
     setFilledDocumentUrl(null);
   };
 
+  // Handles manual form filling - only for document IDs 1 and 5
   const handleFillManually = () => {
+    if (!selectedDocument || (selectedDocument.id !== 1 && selectedDocument.id !== 5)) {
+      message.info("Form filling is only available for invitation documents");
+      return;
+    }
+    
     setFormMode('manual');
     setIsFormModalVisible(true);
     handleCancel(); // Close the document preview modal
-
-    // Pre-fill with student data if available
-    if (studentProfile) {
-      form.setFieldsValue({
-        first_name: studentProfile.first_name,
-        last_name: studentProfile.last_name,
-        middle_name: studentProfile.middle_name,
-        speciality: studentProfile.speciality,
-        course: studentProfile.course,
-      });
-    }
+    
+    // Reset the form to ensure empty fields
+    form.resetFields();
   };
 
+  // Handles automatic form filling - only for document IDs 1 and 5
   const handleFillAutomatically = () => {
+    if (!selectedDocument || (selectedDocument.id !== 1 && selectedDocument.id !== 5)) {
+      message.info("Form filling is only available for invitation documents");
+      return;
+    }
+    
     if (!isAuthenticated) {
       message.error("Please log in to use auto-fill feature");
       return;
@@ -148,50 +152,44 @@ export default function DocumentsPage() {
     setFormMode('auto');
     setIsFormModalVisible(true);
     handleCancel(); // Close the document preview modal
-
-    // Auto-fill all student data fields
-    if (studentProfile) {
-      form.setFieldsValue({
-        first_name: studentProfile.first_name,
-        last_name: studentProfile.last_name,
-        middle_name: studentProfile.middle_name,
-        speciality: studentProfile.speciality,
-        course: studentProfile.course,
-        // We can add other fields as needed but they should be empty for user to fill
-      });
-    } else {
-      message.error("Student profile not found. Please refresh the page and try again.");
-    }
+    
+    // Reset the form first
+    form.resetFields();
+    
+    // For auto mode, we only set the student ID field internally
+    // All other fields remain empty for the student to fill
   };
 
   const handleFormSubmit = async (values: any) => {
+    if (!selectedDocument) {
+      message.error("No document selected");
+      return;
+    }
+    
     setLoading(true);
     try {
-      // Determine which document type based on selected document name
       let endpoint = '';
       let pdfEndpoint = '';
       
-      if (selectedDocument?.name.toLowerCase().includes('invitation')) {
+      // Determine which document type and endpoint to use
+      if (selectedDocument.id === 1) {
         endpoint = 'invitation/create/';
-        if (selectedDocument?.name.toLowerCase().includes('prediploma')) {
-          pdfEndpoint = 'invitation_prediploma/{id}/pdf/';
-        } else {
-          pdfEndpoint = 'invitation/{id}/pdf/';
-        }
-        // For invitation letters, add current year
-        values.current_year = new Date().getFullYear();
-      } else if (selectedDocument?.name.toLowerCase().includes('registration')) {
-        endpoint = 'course-registration/create/';
-        pdfEndpoint = 'course-registration/{id}/pdf/';
+        pdfEndpoint = 'invitation/{id}/pdf/';
+      } else if (selectedDocument.id === 5) {
+        endpoint = 'invitation/create/';
+        pdfEndpoint = 'invitation_prediploma/{id}/pdf/';
+      } else {
+        throw new Error('Unsupported document type');
       }
       
-      // Prepare the data for submission
+      // Format dates properly and prepare form data
       const formData = {
         ...values,
-        // Convert moment dates to string format if they exist
         start_date: values.start_date ? values.start_date.format('YYYY-MM-DD') : undefined,
         end_date: values.end_date ? values.end_date.format('YYYY-MM-DD') : undefined,
-        student: studentProfile?.id || 1 // Add student ID from profile or default for manual mode
+        current_year: new Date().getFullYear(),
+        // For auto mode, use the student ID from profile, otherwise use the default "2"
+        student: formMode === 'auto' && studentProfile ? studentProfile.id : "2"
       };
 
       // Send the form data to the backend
@@ -250,70 +248,62 @@ export default function DocumentsPage() {
     }
   };
 
-  // Dynamic form fields based on document type
+  // Render form fields based on the selected document
   const renderFormFields = () => {
     if (!selectedDocument) return null;
     
-    // Base fields common for all document types
-    const baseFields = (
-      <>
-        <Form.Item name="first_name" label="First Name">
-          <Input disabled={formMode === 'auto'} />
-        </Form.Item>
-        <Form.Item name="last_name" label="Last Name">
-          <Input disabled={formMode === 'auto'} />
-        </Form.Item>
-        <Form.Item name="middle_name" label="Middle Name">
-          <Input disabled={formMode === 'auto'} />
-        </Form.Item>
-        <Form.Item name="course" label="Course">
-          <Input disabled={formMode === 'auto'} />
-        </Form.Item>
-        <Form.Item name="speciality" label="Speciality">
-          <Input disabled={formMode === 'auto'} />
-        </Form.Item>
-      </>
-    );
-    
-    // Additional fields for invitation letter
-    if (selectedDocument.name.toLowerCase().includes('invitation')) {
+    // Invitation letter fields (for document IDs 1 and 5)
+    if (selectedDocument.id === 1 || selectedDocument.id === 5) {
       return (
         <>
-          {baseFields}
+          {/* Student information fields - Only shown in manual mode */}
+          {formMode === 'manual' && (
+            <>
+              <Form.Item name="first_name" label="First Name" rules={[{ required: true }]}>
+                <Input placeholder="Введите имя" />
+              </Form.Item>
+              <Form.Item name="last_name" label="Last Name" rules={[{ required: true }]}>
+                <Input placeholder="Введите фамилию" />
+              </Form.Item>
+              <Form.Item name="middle_name" label="Middle Name">
+                <Input placeholder="Введите отчество" />
+              </Form.Item>
+              <Form.Item name="course" label="Course" rules={[{ required: true }]}>
+                <Input type="number" placeholder="Курс" />
+              </Form.Item>
+              <Form.Item name="speciality" label="Speciality" rules={[{ required: true }]}>
+                <Input placeholder="Специальность" />
+              </Form.Item>
+            </>
+          )}
+          
+          {/* Invitation specific fields */}
           <Form.Item name="organization_name" label="Organization Name" rules={[{ required: true }]}>
-            <Input />
+            <Input placeholder="Название организации" />
           </Form.Item>
           <Form.Item name="start_date" label="Start Date" rules={[{ required: true }]}>
-            <DatePicker />
+            <DatePicker format="YYYY-MM-DD" placeholder="Дата начала" />
           </Form.Item>
           <Form.Item name="end_date" label="End Date" rules={[{ required: true }]}>
-            <DatePicker />
+            <DatePicker format="YYYY-MM-DD" placeholder="Дата окончания" />
           </Form.Item>
           <Form.Item name="supervisor_name" label="Supervisor Name" rules={[{ required: true }]}>
-            <Input />
+            <Input placeholder="ФИО руководителя" />
           </Form.Item>
           <Form.Item name="supervisor_position" label="Supervisor Position" rules={[{ required: true }]}>
-            <Input />
+            <Input placeholder="Должность руководителя" />
           </Form.Item>
         </>
       );
     }
     
-    // Additional fields for course registration
-    if (selectedDocument.name.toLowerCase().includes('registration')) {
-      return (
-        <>
-          {baseFields}
-          <Form.Item name="semester" label="Semester" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          {/* For course selection, use a separate component or implement a multi-select */}
-        </>
-      );
-    }
-    
-    // Default case: only base fields
-    return baseFields;
+    // Default case: empty form
+    return <p>No form available for this document type.</p>;
+  };
+
+  // Check if the document is fillable (only documents with IDs 1 and 5)
+  const isFillableDocument = (document: Document | null) => {
+    return document && (document.id === 1 || document.id === 5);
   };
 
   return (
@@ -353,21 +343,25 @@ export default function DocumentsPage() {
             >
               Download Template
             </Button>,
-            <Button key="fill-manually" onClick={handleFillManually}>
-              Fill Manually
-            </Button>,
-            <Tooltip 
-              title={!isAuthenticated ? "Please log in to use this feature" : ""}
-            >
-              <Button 
-                key="fill-auto" 
-                onClick={handleFillAutomatically} 
-                disabled={!isAuthenticated}
-                type="primary"
-              >
-                Fill Automatically
+            isFillableDocument(selectedDocument) && (
+              <Button key="fill-manually" onClick={handleFillManually}>
+                Fill Manually
               </Button>
-            </Tooltip>,
+            ),
+            isFillableDocument(selectedDocument) && (
+              <Tooltip 
+                title={!isAuthenticated ? "Please log in to use this feature" : ""}
+              >
+                <Button 
+                  key="fill-auto" 
+                  onClick={handleFillAutomatically} 
+                  disabled={!isAuthenticated}
+                  type="primary"
+                >
+                  Fill Automatically
+                </Button>
+              </Tooltip>
+            ),
             <Button key="cancel" onClick={handleCancel}>
               Close
             </Button>
@@ -412,6 +406,7 @@ export default function DocumentsPage() {
               key="download" 
               type="primary" 
               href={filledDocumentUrl || '#'} 
+              target="_blank"
               download
             >
               Download Document
@@ -436,138 +431,3 @@ export default function DocumentsPage() {
     </Layout>
   );
 }
-
-
-// "use client";
-
-// import { useEffect, useState } from "react";
-// import { Layout, Card, Row, Col, Button, Modal, Spin } from "antd";
-// import HeaderSection from "../components/Header";
-// import { Footer } from "../components/Footer";
-// import SearchSection from "../components/SearchSectionDoc";
-// import mammoth from "mammoth";
-
-// const { Content } = Layout;
-
-// interface Document {
-//   id: number;
-//   name: string;
-//   file: string;  // URL to the file
-// }
-
-// export default function DocumentsPage() {
-//   const [documents, setDocuments] = useState<Document[]>([]);
-//   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
-//   const [isModalVisible, setIsModalVisible] = useState(false);
-//   const [docxContent, setDocxContent] = useState<string | null>(null);
-//   const [loading, setLoading] = useState(false);
-
-//   useEffect(() => {
-//     fetch("http://localhost:8000/api/documents/") // Change to your backend API URL
-//       .then((res) => res.json())
-//       .then((data) => setDocuments(data))
-//       .catch((error) => console.error("Error fetching documents:", error));
-//   }, []);
-
-//   const showDocumentModal = async (doc: Document) => {
-//     setSelectedDocument(doc);
-//     setIsModalVisible(true);
-
-//     const fileExtension = doc.file.split(".").pop()?.toLowerCase();
-
-//     if (fileExtension === "docx") {
-//       setLoading(true);
-//       try {
-//         const response = await fetch(doc.file);
-//         const arrayBuffer = await response.arrayBuffer();
-//         const { value } = await mammoth.convertToHtml({ arrayBuffer });
-//         setDocxContent(value);
-//       } catch (error) {
-//         console.error("Error processing DOCX:", error);
-//         setDocxContent("Error loading document.");
-//       } finally {
-//         setLoading(false);
-//       }
-//     }
-//   };
-
-//   const handleCancel = () => {
-//     setIsModalVisible(false);
-//     setDocxContent(null);
-//   };
-
-//   const renderDocumentViewer = () => {
-//     if (!selectedDocument) return null;
-
-//     const fileExtension = selectedDocument.file.split(".").pop()?.toLowerCase();
-
-//     if (fileExtension === "pdf") {
-//       return (
-//         <iframe
-//           src={encodeURI(selectedDocument.file)}
-//           width="100%"
-//           height="500px"
-//           title={selectedDocument.name}
-//         ></iframe>
-//       );
-//     } else if (fileExtension === "docx") {
-//       return loading ? <Spin /> : <div dangerouslySetInnerHTML={{ __html: docxContent || "" }} />;
-//     } else {
-//       return <p>Unsupported file format.</p>;
-//     }
-//   };
-
-//   return (
-//     <Layout>
-//       <HeaderSection />
-//       <SearchSection />
-//       <Content style={{ padding: "32px", textAlign: "center" }}>
-//         <h1 style={{ fontSize: '1.8rem', color: '#002D62', marginBottom: '30px' }}>
-//           Samples
-//         </h1>
-//         <Row gutter={[16, 16]} justify="center" style={{ marginTop: "20px" }}>
-//           {documents.map((doc) => (
-//             <Col key={doc.id} xs={24} sm={12} md={8}>
-//               <Card 
-//                 style={{ textAlign: "center", padding: "30px", cursor: "pointer" }}
-//                 onClick={() => showDocumentModal(doc)}
-//               >
-//                 <h4>{doc.name}</h4>
-//               </Card>
-//             </Col>
-//           ))}
-//         </Row>
-
-//         {/* Document Modal */}
-//         <Modal
-//           title={selectedDocument?.name}
-//           open={isModalVisible}
-//           onCancel={handleCancel}
-//           width={800}
-//           footer={[
-//             <Button 
-//               key="download" 
-//               type="primary" 
-//               href={selectedDocument ? selectedDocument.file : '#'} 
-//               download
-//             >
-//               Download
-//             </Button>,
-//             <Button key="fill-manually">
-//               Fill Manually
-//             </Button>,
-//             <Button key="fill-auto">
-//               Fill Automatically
-//             </Button>,
-//             <Button key="cancel" onClick={handleCancel}>
-//               Close
-//             </Button>
-//           ]}
-//         >
-//           {renderDocumentViewer()}
-//         </Modal>
-//       </Content>
-//       <Footer />
-//     </Layout>
-//   );
-// }
