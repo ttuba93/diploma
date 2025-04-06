@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Layout, Table, Button, Modal, Input, Badge, Tag, Select, Typography, Space, message } from "antd";
 import HeaderSection from "../components/Header";
 import { Footer } from "../components/Footer";
+import axios from "axios";
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -13,15 +14,43 @@ const { Option } = Select;
 // Define proper TypeScript interfaces
 interface Appointment {
   id: number;
-  studentId: string;
+  student: number;
+  studentId?: string;
   name: string;
   course: string;
   specialty: string;
   date: string;
   time: string;
   status: "pending" | "approved" | "rejected";
-  rejectionReason?: string;
+  rejection_reason?: string;
+  manager: number | null;
 }
+
+// API service for appointments
+const appointmentService = {
+  baseUrl: "/api/appointments/",
+  
+  async getAll(managerId?: number): Promise<Appointment[]> {
+    try {
+      const url = managerId ? `${this.baseUrl}?manager=${managerId}` : this.baseUrl;
+      const response = await axios.get(url);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching appointments:", error);
+      throw error;
+    }
+  },
+  
+  async update(id: number, data: Partial<Appointment>): Promise<Appointment> {
+    try {
+      const response = await axios.patch(`${this.baseUrl}${id}/`, data);
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating appointment ${id}:`, error);
+      throw error;
+    }
+  }
+};
 
 export default function ManagerDashboard() {
   // State for appointments data
@@ -38,66 +67,36 @@ export default function ManagerDashboard() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [courseFilter, setCourseFilter] = useState<string>("all");
   const [searchText, setSearchText] = useState<string>("");
+  
+  // State for manager ID (would typically come from auth context)
+  const [managerId, setManagerId] = useState<number | null>(null);
 
-  // Mock data - in a real application, this would come from an API
-  useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setAppointments([
-        {
-          id: 1,
-          studentId: "220207",
-          name: "Akhmet Asanov",
-          course: "1 course",
-          specialty: "Computer Science",
-          date: "2025-04-10",
-          time: "10:00",
-          status: "pending"
-        },
-        {
-          id: 2,
-          studentId: "210156",
-          name: "Aisha Nurbekova",
-          course: "2 course",
-          specialty: "Information Systems",
-          date: "2025-04-10",
-          time: "11:00",
-          status: "pending"
-        },
-        {
-          id: 3,
-          studentId: "200089",
-          name: "Daulet Sarsenov",
-          course: "3 course",
-          specialty: "Big Data Analysis",
-          date: "2025-04-11",
-          time: "14:00",
-          status: "pending"
-        },
-        {
-          id: 4,
-          studentId: "190234",
-          name: "Dinara Karimova",
-          course: "4 course",
-          specialty: "Software Engineering",
-          date: "2025-04-12",
-          time: "09:00",
-          status: "pending"
-        },
-        {
-          id: 5,
-          studentId: "180045",
-          name: "Nurlan Aidarov",
-          course: "5-7 course",
-          specialty: "Cybersecurity",
-          date: "2025-04-12",
-          time: "13:00",
-          status: "pending"
-        }
-      ] as Appointment[]);
+  // Fetch appointments from API
+  const fetchAppointments = async () => {
+    setLoading(true);
+    try {
+      const data = await appointmentService.getAll(managerId || undefined);
+      setAppointments(data);
       setLoading(false);
-    }, 1000);
+    } catch (error) {
+      message.error("Failed to load appointments");
+      setLoading(false);
+    }
+  };
+
+  // Load manager ID from session/local storage or auth context
+  useEffect(() => {
+    // In a real app, this would come from your auth system
+    const loggedInManagerId = localStorage.getItem("managerId");
+    if (loggedInManagerId) {
+      setManagerId(parseInt(loggedInManagerId));
+    }
   }, []);
+
+  // Fetch appointments when component mounts or manager ID changes
+  useEffect(() => {
+    fetchAppointments();
+  }, [managerId]);
 
   // Apply filters
   useEffect(() => {
@@ -118,7 +117,7 @@ export default function ManagerDashboard() {
       const lowerSearchText = searchText.toLowerCase();
       filtered = filtered.filter(app => 
         app.name.toLowerCase().includes(lowerSearchText) || 
-        app.studentId.includes(searchText) ||
+        (app.studentId && app.studentId.includes(searchText)) ||
         app.specialty.toLowerCase().includes(lowerSearchText)
       );
     }
@@ -127,11 +126,26 @@ export default function ManagerDashboard() {
   }, [appointments, statusFilter, courseFilter, searchText]);
 
   // Handle appointment approval
-  const handleApprove = (appointment: Appointment) => {
-    setAppointments(appointments.map(app => 
-      app.id === appointment.id ? { ...app, status: "approved" as const } : app
-    ));
-    message.success(`Appointment for ${appointment.name} has been approved.`);
+  const handleApprove = async (appointment: Appointment) => {
+    setLoading(true);
+    try {
+      // Update appointment with approved status and current manager
+      const updatedAppointment = await appointmentService.update(appointment.id, {
+        status: "approved",
+        manager: managerId
+      });
+      
+      // Update local state with the server response
+      setAppointments(appointments.map(app => 
+        app.id === updatedAppointment.id ? updatedAppointment : app
+      ));
+      
+      message.success(`Appointment for ${appointment.name} has been approved.`);
+    } catch (error) {
+      message.error("Failed to approve appointment");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Open rejection modal
@@ -142,13 +156,29 @@ export default function ManagerDashboard() {
   };
 
   // Handle rejection confirmation
-  const handleReject = () => {
+  const handleReject = async () => {
     if (currentAppointment) {
-      setAppointments(appointments.map(app => 
-        app.id === currentAppointment.id ? { ...app, status: "rejected" as const, rejectionReason } : app
-      ));
-      setIsRejectionModalOpen(false);
-      message.info(`Appointment for ${currentAppointment.name} has been rejected.`);
+      setLoading(true);
+      try {
+        // Update appointment with rejected status, rejection reason, and current manager
+        const updatedAppointment = await appointmentService.update(currentAppointment.id, {
+          status: "rejected",
+          // rejection_reason: rejectionReason || null,
+          manager: managerId
+        });
+        
+        // Update local state with the server response
+        setAppointments(appointments.map(app => 
+          app.id === updatedAppointment.id ? updatedAppointment : app
+        ));
+        
+        setIsRejectionModalOpen(false);
+        message.info(`Appointment for ${currentAppointment.name} has been rejected.`);
+      } catch (error) {
+        message.error("Failed to reject appointment");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -156,9 +186,9 @@ export default function ManagerDashboard() {
   const columns = [
     {
       title: "Student ID",
-      dataIndex: "studentId",
       key: "studentId",
       width: 120,
+      render: (record: Appointment) => record.studentId || record.student,
     },
     {
       title: "Name",
@@ -221,19 +251,29 @@ export default function ManagerDashboard() {
     },
   ];
 
+  // Add a refresh button handler
+  const handleRefresh = () => {
+    fetchAppointments();
+  };
+
   return (
     <Layout className="min-h-screen">
       <HeaderSection />
       <Content className="p-6 bg-gray-50">
         <div className="bg-white p-6 rounded-lg shadow">
-          <Title level={2} className="text-[#002F6C] mb-6">
-            Appointment Requests Manager
-          </Title>
+          <div className="flex justify-between items-center mb-6">
+            <Title level={2} className="text-[#002F6C] mb-0">
+              Appointment Requests Manager
+            </Title>
+            <Button onClick={handleRefresh} loading={loading}>
+              Refresh
+            </Button>
+          </div>
 
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-4 mb-6">
             <Input.Search
-              placeholder="Search by name, ID or specialty"
+              placeholder="Search by name or specialty"
               style={{ width: 300 }}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
@@ -311,10 +351,11 @@ export default function ManagerDashboard() {
             onCancel={() => setIsRejectionModalOpen(false)}
             okText="Confirm Rejection"
             cancelText="Cancel"
+            confirmLoading={loading}
           >
             <div>
               <p>
-                <Text strong>Student:</Text> {currentAppointment.name} ({currentAppointment.studentId})
+                <Text strong>Student:</Text> {currentAppointment.name} ({currentAppointment.studentId || currentAppointment.student})
               </p>
               <p>
                 <Text strong>Course:</Text> {currentAppointment.course}
