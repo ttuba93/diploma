@@ -42,7 +42,7 @@ interface Appointment {
 
 // API service for appointments
 const appointmentService = {
-  baseUrl: "/api/appointments/",
+  baseUrl: "http://127.0.0.1:8000/api/appointments/",
   
   async getAll(): Promise<Appointment[]> {
     try {
