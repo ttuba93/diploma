@@ -30,10 +30,10 @@ interface Appointment {
 const appointmentService = {
   baseUrl: "/api/appointments/",
   
-  async getAll(managerId?: number): Promise<Appointment[]> {
+  async getAll(): Promise<Appointment[]> {
     try {
-      const url = managerId ? `${this.baseUrl}?manager=${managerId}` : this.baseUrl;
-      const response = await axios.get(url);
+      // Removed the manager parameter to get all appointments
+      const response = await axios.get(this.baseUrl);
       return response.data;
     } catch (error) {
       console.error("Error fetching appointments:", error);
@@ -69,13 +69,13 @@ export default function ManagerDashboard() {
   const [searchText, setSearchText] = useState<string>("");
   
   // State for manager ID (would typically come from auth context)
-  const [managerId, setManagerId] = useState<number | null>(1); // Default to 1 for testing
+  const [managerId, setManagerId] = useState<number | null>(1); // Default to 1 for updates
 
-  // Fetch appointments from API
+  // Fetch appointments from API - now gets all appointments
   const fetchAppointments = async () => {
     setLoading(true);
     try {
-      const data = await appointmentService.getAll(managerId || undefined);
+      const data = await appointmentService.getAll();
       setAppointments(data);
       setFilteredAppointments(data); // Initialize filtered appointments
       setLoading(false);
@@ -85,7 +85,7 @@ export default function ManagerDashboard() {
     }
   };
 
-  // Load manager ID from session/local storage or auth context
+  // Load manager ID from session/local storage or auth context - for updates only
   useEffect(() => {
     // In a real app, this would come from your auth system
     const loggedInManagerId = localStorage.getItem("managerId");
@@ -97,12 +97,10 @@ export default function ManagerDashboard() {
     }
   }, []);
 
-  // Fetch appointments when component mounts or manager ID changes
+  // Fetch appointments when component mounts
   useEffect(() => {
-    if (managerId !== null) {
-      fetchAppointments();
-    }
-  }, [managerId]);
+    fetchAppointments();
+  }, []); // Removed manager dependency
 
   // Apply filters whenever appointments, filters, or search text changes
   useEffect(() => {
