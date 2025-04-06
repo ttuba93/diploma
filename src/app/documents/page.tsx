@@ -6,7 +6,6 @@ import HeaderSection from "../components/Header";
 import { Footer } from "../components/Footer";
 import SearchSection from "../components/SearchSectionDoc";
 import mammoth from "mammoth";
-import moment from "moment";
 
 const { Content } = Layout;
 
@@ -17,16 +16,23 @@ interface Document {
   desc?: string; // Optional description
 }
 
-interface StudentProfile {
+interface UserData {
   id: number;
   first_name: string;
   last_name: string;
-  middle_name: string;
+  middle_name?: string;
   kbtu_id: string;
   course: number;
   speciality: string;
   telephone_number: string;
   email: string;
+}
+
+interface Student {
+  user_id: number;
+  username: string;
+  role: string;
+  user_data: UserData;
 }
 
 export default function DocumentsPage() {
@@ -39,13 +45,65 @@ export default function DocumentsPage() {
   // Form handling states
   const [isFormModalVisible, setIsFormModalVisible] = useState(false);
   const [formMode, setFormMode] = useState<'manual' | 'auto'>('manual');
-  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [student, setStudent] = useState<Student | null>(null);
   const [form] = Form.useForm();
   
   // Filled document display states
   const [filledDocumentUrl, setFilledDocumentUrl] = useState<string | null>(null);
   const [showFilledDocument, setShowFilledDocument] = useState(false);
+
+  // Function to check if user is authenticated
+  const isAuthenticated = () => {
+    return student !== null && student.user_id !== undefined;
+  };
+
+  // Function to load user data from localStorage
+  const loadUserData = () => {
+    try {
+      // Check different possible keys for user data
+      let userData = localStorage.getItem("student");
+
+      if (!userData) {
+        // Try other possible keys
+        userData = localStorage.getItem("user");
+      }
+
+      if (!userData) {
+        // Check all keys in localStorage for user data content
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key) {
+            const value = localStorage.getItem(key);
+            if (value && value.includes('"user_id"') && value.includes('"user_data"')) {
+              userData = value;
+              console.log(`Found user data in key: ${key}`);
+              break;
+            }
+          }
+        }
+      }
+
+      if (userData) {
+        const parsedUser = JSON.parse(userData);
+        console.log("Parsed user data:", parsedUser);
+        
+        // Check data structure
+        if (parsedUser && parsedUser.user_id) {
+          setStudent(parsedUser);
+          console.log("Student data set successfully");
+        } else {
+          console.error("Invalid user data structure:", parsedUser);
+          setStudent(null);
+        }
+      } else {
+        console.log("No user data found in localStorage");
+        setStudent(null);
+      }
+    } catch (error) {
+      console.error("Error loading user data:", error);
+      setStudent(null);
+    }
+  };
 
   useEffect(() => {
     // Fetch documents
@@ -54,36 +112,31 @@ export default function DocumentsPage() {
       .then((data) => setDocuments(data))
       .catch((error) => console.error("Error fetching documents:", error));
     
-    // Check authentication and fetch profile if authenticated
-    const token = localStorage.getItem('token');
-    if (token) {
-      fetch("http://localhost:8000/api/students/profile/", {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-        .then((res) => {
-          if (res.ok) {
-            setIsAuthenticated(true);
-            return res.json();
-          } else {
-            // Token might be invalid or expired
-            localStorage.removeItem('token');
-            setIsAuthenticated(false);
-            return null;
-          }
-        })
-        .then((data) => {
-          if (data) setStudentProfile(data);
-        })
-        .catch((error) => {
-          console.error("Error fetching student profile:", error);
-          setIsAuthenticated(false);
-        });
-    } else {
-      setIsAuthenticated(false);
+    // Log all localStorage items for debugging
+    console.log("All localStorage items:");
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        console.log(`${key}: ${localStorage.getItem(key)}`);
+      }
     }
+
+    // Load user data
+    loadUserData();
+
+    // Add storage event listener to update data when changed in another tab
+    window.addEventListener('storage', loadUserData);
+    
+    return () => {
+      window.removeEventListener('storage', loadUserData);
+    };
   }, []);
+
+  // Debug logging for student state
+  useEffect(() => {
+    console.log("Current student state:", student);
+    console.log("localStorage student:", localStorage.getItem("student"));
+  }, [student]);
 
   const showDocumentModal = async (doc: Document) => {
     setSelectedDocument(doc);
@@ -144,8 +197,10 @@ export default function DocumentsPage() {
       return;
     }
     
-    if (!isAuthenticated) {
-      message.error("Please log in to use auto-fill feature");
+    if (!isAuthenticated()) {
+      message.warning("You need to login first to use auto-fill feature");
+      console.log("Authentication status:", isAuthenticated());
+      console.log("Current student data:", student);
       return;
     }
     
@@ -156,8 +211,16 @@ export default function DocumentsPage() {
     // Reset the form first
     form.resetFields();
     
-    // For auto mode, we only set the student ID field internally
-    // All other fields remain empty for the student to fill
+    // Pre-fill the form with student data if in auto mode
+    if (student && student.user_data) {
+      form.setFieldsValue({
+        first_name: student.user_data.first_name,
+        last_name: student.user_data.last_name,
+        middle_name: student.user_data.middle_name || "",
+        course: student.user_data.course,
+        speciality: student.user_data.speciality
+      });
+    }
   };
 
   const handleFormSubmit = async (values: any) => {
@@ -188,16 +251,17 @@ export default function DocumentsPage() {
         start_date: values.start_date ? values.start_date.format('YYYY-MM-DD') : undefined,
         end_date: values.end_date ? values.end_date.format('YYYY-MM-DD') : undefined,
         current_year: new Date().getFullYear(),
-        // For auto mode, use the student ID from profile, otherwise use the default "2"
-        student: formMode === 'auto' && studentProfile ? studentProfile.id : "2"
+        // For auto mode, use the student ID from user data
+        student: formMode === 'auto' && student ? student.user_data.id.toString() : "2"
       };
+
+      console.log("Submitting form data:", formData);
 
       // Send the form data to the backend
       const response = await fetch(`http://localhost:8000/api/${endpoint}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(formData)
       });
@@ -350,12 +414,12 @@ export default function DocumentsPage() {
             ),
             isFillableDocument(selectedDocument) && (
               <Tooltip 
-                title={!isAuthenticated ? "Please log in to use this feature" : ""}
+                title={!isAuthenticated() ? "Please log in to use this feature" : ""}
               >
                 <Button 
                   key="fill-auto" 
                   onClick={handleFillAutomatically} 
-                  disabled={!isAuthenticated}
+                  disabled={!isAuthenticated()}
                   type="primary"
                 >
                   Fill Automatically
@@ -426,6 +490,11 @@ export default function DocumentsPage() {
             ></iframe>
           )}
         </Modal>
+        
+        {/* Debug information */}
+        <div className="mt-4 text-xs text-gray-500" style={{ marginTop: "20px", fontSize: "12px", color: "#999" }}>
+          Authentication status: {isAuthenticated() ? "Logged in" : "Not logged in"}
+        </div>
       </Content>
       <Footer />
     </Layout>
