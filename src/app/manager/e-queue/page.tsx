@@ -22,7 +22,7 @@ interface Appointment {
   date: string;
   time: string;
   status: "pending" | "approved" | "rejected";
-  rejection_reason?: string;
+  rejection_reason?: string | null;
   manager: number | null;
 }
 
@@ -69,7 +69,7 @@ export default function ManagerDashboard() {
   const [searchText, setSearchText] = useState<string>("");
   
   // State for manager ID (would typically come from auth context)
-  const [managerId, setManagerId] = useState<number | null>(null);
+  const [managerId, setManagerId] = useState<number | null>(1); // Default to 1 for testing
 
   // Fetch appointments from API
   const fetchAppointments = async () => {
@@ -77,6 +77,7 @@ export default function ManagerDashboard() {
     try {
       const data = await appointmentService.getAll(managerId || undefined);
       setAppointments(data);
+      setFilteredAppointments(data); // Initialize filtered appointments
       setLoading(false);
     } catch (error) {
       message.error("Failed to load appointments");
@@ -90,16 +91,23 @@ export default function ManagerDashboard() {
     const loggedInManagerId = localStorage.getItem("managerId");
     if (loggedInManagerId) {
       setManagerId(parseInt(loggedInManagerId));
+    } else {
+      // For development, set a default manager ID if none is found
+      setManagerId(1);
     }
   }, []);
 
   // Fetch appointments when component mounts or manager ID changes
   useEffect(() => {
-    fetchAppointments();
+    if (managerId !== null) {
+      fetchAppointments();
+    }
   }, [managerId]);
 
-  // Apply filters
+  // Apply filters whenever appointments, filters, or search text changes
   useEffect(() => {
+    if (!appointments.length) return;
+    
     let filtered = [...appointments];
     
     // Filter by status
@@ -117,7 +125,7 @@ export default function ManagerDashboard() {
       const lowerSearchText = searchText.toLowerCase();
       filtered = filtered.filter(app => 
         app.name.toLowerCase().includes(lowerSearchText) || 
-        (app.studentId && app.studentId.includes(searchText)) ||
+        app.student.toString().includes(searchText) ||
         app.specialty.toLowerCase().includes(lowerSearchText)
       );
     }
@@ -163,7 +171,7 @@ export default function ManagerDashboard() {
         // Update appointment with rejected status, rejection reason, and current manager
         const updatedAppointment = await appointmentService.update(currentAppointment.id, {
           status: "rejected",
-          // rejection_reason: rejectionReason || null,
+          rejection_reason: rejectionReason || "", // Send empty string if no reason provided
           manager: managerId
         });
         
@@ -296,11 +304,9 @@ export default function ManagerDashboard() {
               onChange={(value: string) => setCourseFilter(value)}
             >
               <Option value="all">All Courses</Option>
-              <Option value="1 course">1 course</Option>
-              <Option value="2 course">2 course</Option>
-              <Option value="3 course">3 course</Option>
-              <Option value="4 course">4 course</Option>
-              <Option value="5-7 course">5-7 course</Option>
+              <Option value="3">3 course</Option>
+              <Option value="4">4 course</Option>
+              {/* Add other course options based on your data */}
             </Select>
           </div>
 

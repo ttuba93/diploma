@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Layout, Button, Calendar, Input, Typography, message, Modal, Spin, Alert, Select } from "antd";
+import { Layout, Button, Calendar, Input, Typography, message, Modal, Spin, Alert, Select, Card, Badge } from "antd";
 import HeaderSection from "../components/Header";
 import { Footer } from "../components/Footer";
 import axios from "axios";
@@ -12,6 +12,7 @@ import dayjs from 'dayjs';
 const { Content } = Layout;
 const { Title, Text } = Typography;
 const { Option } = Select;
+const { TextArea } = Input;
 
 interface Student {
   user_id: number;
@@ -33,7 +34,7 @@ interface Student {
 interface Appointment {
   id: number;
   student: number;
-  name: string;
+  name: string; // This represents the reason for appointment
   date: string;
   time: string;
   status: 'pending' | 'approved' | 'rejected';
@@ -51,13 +52,13 @@ export default function AppointmentQueue() {
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [reason, setReason] = useState<string>("");
+  const [appointmentReason, setAppointmentReason] = useState<string>("");
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [name, setName] = useState<string>("");
+  const [selectedTab, setSelectedTab] = useState<string>("schedule");
 
   const courseOptions = [
     '1 course', 
@@ -78,11 +79,16 @@ export default function AppointmentQueue() {
     '16:00:00'
   ];
 
-  // Debug effect to log student state
-  useEffect(() => {
-    console.log("Current student state:", student);
-    console.log("localStorage student:", localStorage.getItem("student"));
-  }, [student]);
+  const commonReasons = [
+    "Thesis consultation",
+    "Student status certificate",
+    "Academic leave application",
+    "Specialization transfer",
+    "Reinstatement after expulsion",
+    "Transcript processing",
+    "Payment issues resolution",
+    "Student exchange consultation"
+  ];
 
   useEffect(() => {
     // Fetch existing appointments to check availability
@@ -110,15 +116,6 @@ export default function AppointmentQueue() {
         setError("Failed to load available appointments.");
         setLoading(false);
       });
-
-    // Log all localStorage items for debugging
-    console.log("All localStorage items:");
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key) {
-        console.log(`${key}: ${localStorage.getItem(key)}`);
-      }
-    }
 
     // Load user data from localStorage
     loadUserData();
@@ -161,7 +158,6 @@ export default function AppointmentQueue() {
             const value = localStorage.getItem(key);
             if (value && value.includes('"user_id"') && value.includes('"user_data"')) {
               userData = value;
-              console.log(`Found user data in key: ${key}`);
               break;
             }
           }
@@ -170,21 +166,16 @@ export default function AppointmentQueue() {
 
       if (userData) {
         const parsedUser = JSON.parse(userData);
-        console.log("Parsed user data:", parsedUser);
         
         // Check data structure
         if (parsedUser && parsedUser.user_id) {
           setStudent(parsedUser);
-          // Pre-set name and course from student data
-          setName(`${parsedUser.user_data.first_name} ${parsedUser.user_data.last_name}`);
+          // Pre-set course from student data
           setSelectedCourse(parsedUser.user_data.course);
-          console.log("Student data set successfully");
         } else {
-          console.error("Invalid user data structure:", parsedUser);
           setStudent(null);
         }
       } else {
-        console.log("No user data found in localStorage");
         setStudent(null);
       }
     } catch (error) {
@@ -217,14 +208,18 @@ export default function AppointmentQueue() {
   const handleReserveClick = () => {
     // Check if user is authenticated
     if (!isAuthenticated()) {
-      message.warning("You need to login first to make an appointment");
+      message.warning("You need to authenticate to schedule an appointment");
       router.push("/login");
       return;
     }
 
     // Validate selections
-    if (!selectedDate || !selectedTime || !name) {
-      message.error("Please fill in all required fields");
+    if (!selectedDate || !selectedTime || !appointmentReason) {
+      if (!appointmentReason) {
+        message.error("Please specify the reason for your visit");
+      } else {
+        message.error("Please fill in all required fields");
+      }
       return;
     }
 
@@ -235,40 +230,36 @@ export default function AppointmentQueue() {
   const handleReserveConfirm = () => {
     // Check authentication again
     if (!isAuthenticated()) {
-      message.error("You must be logged in to make an appointment!");
+      message.error("You must be authenticated to schedule an appointment!");
       router.push("/login");
       return;
     }
 
     // Check if student data is properly loaded
     if (!student || !student.user_data) {
-      message.error("User data is incomplete. Please login again.");
+      message.error("User data is incomplete. Please log in again.");
       router.push("/login");
       return;
     }
 
     setConfirmLoading(true);
 
-    console.log("Creating appointment with student data:", student);
-
     // Format data according to the Appointment model
     const appointmentData = {
       student: student.user_data.id,
-      name: name,
+      name: appointmentReason, // Using appointmentReason as the name field
       date: selectedDate,
       time: selectedTime,
-      status: "pending"
+      status: "pending",
+      course: selectedCourse,
+      specialty: student.user_data.speciality
     };
-
-    // Log data being sent
-    console.log("Sending appointment data:", appointmentData);
 
     // Send appointment to API
     axios
       .post("http://127.0.0.1:8000/api/appointments/", appointmentData)
       .then((response) => {
-        console.log("Appointment created successfully:", response.data);
-        message.success("Your appointment has been scheduled and is pending approval!");
+        message.success("Your appointment has been scheduled and is awaiting confirmation!");
         setIsModalOpen(false);
         
         // Add new appointment to the list
@@ -277,12 +268,14 @@ export default function AppointmentQueue() {
         // Reset selections
         setSelectedDate(null);
         setSelectedTime(null);
-        setReason("");
+        setAppointmentReason("");
         setConfirmLoading(false);
+        
+        // Switch to My Appointments tab
+        setSelectedTab("myAppointments");
       })
       .catch((error) => {
         console.error("Error creating appointment:", error);
-        console.error("Error response:", error.response);
         message.error("Failed to create appointment: " + (error.response?.data?.message || "Unknown error"));
         setConfirmLoading(false);
       });
@@ -330,191 +323,281 @@ export default function AppointmentQueue() {
     return appointments.filter(app => app.student === student.user_data.id);
   };
 
+  // Get status badge
+  const getStatusBadge = (status: string) => {
+    switch(status) {
+      case 'approved':
+        return <Badge status="success" text="Approved" />;
+      case 'rejected':
+        return <Badge status="error" text="Rejected" />;
+      default:
+        return <Badge status="processing" text="Pending" />;
+    }
+  };
+
+  const handleCommonReasonSelect = (reason: string) => {
+    setAppointmentReason(reason);
+  };
+
   return (
-    <Layout className="min-h-screen">
+    <Layout className="min-h-screen bg-gray-50">
       <HeaderSection />
       
-      <Content className="p-6 max-w-4xl mx-auto w-full">
-        <Title level={2} className="text-center text-[#002F6C] mb-6">
-          Dean's Office Appointment System
-        </Title>
-        
-        {loading ? (
-          <div className="flex justify-center">
-            <Spin size="large" />
-          </div>
-        ) : error ? (
-          <Alert message="Error" description={error} type="error" showIcon />
-        ) : (
-          <div className="flex flex-col space-y-6">
-            {/* Authentication status */}
-            {!isAuthenticated() ? (
-              <Alert 
-                message="Not Logged In" 
-                description="Please log in to schedule an appointment." 
-                type="warning" 
-                showIcon 
-                action={
-                  <Button size="small" type="primary" onClick={() => router.push("/login")}>
-                    Login
-                  </Button>
-                }
-              />
-            ) : (
-              <div className="mb-4 p-4 border rounded bg-gray-50">
-                <p><strong>Student Information:</strong></p>
-                <p><strong>KBTU ID:</strong> {student?.user_data.kbtu_id}</p>
-                <p><strong>Name:</strong> {student?.user_data.last_name} {student?.user_data.first_name}</p>
-                <p><strong>Course:</strong> {student?.user_data.course}</p>
-                <p><strong>Specialty:</strong> {student?.user_data.speciality}</p>
-              </div>
-            )}
-            
-            {/* My Appointments Section */}
-            {isAuthenticated() && getMyAppointments().length > 0 && (
-              <div className="border p-4 rounded-lg">
-                <Title level={4} className="text-[#002F6C] mb-4">
-                  My Appointments
-                </Title>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full bg-white">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="py-2 px-4 border-b text-left">Date</th>
-                        <th className="py-2 px-4 border-b text-left">Time</th>
-                        <th className="py-2 px-4 border-b text-left">Status</th>
-                        <th className="py-2 px-4 border-b text-left">Note</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {getMyAppointments().map((app) => (
-                        <tr key={app.id}>
-                          <td className="py-2 px-4 border-b">{app.date}</td>
-                          <td className="py-2 px-4 border-b">{app.time}</td>
-                          <td className="py-2 px-4 border-b">
-                            <span 
-                              className={`px-2 py-1 rounded text-xs ${
-                                app.status === 'approved' ? 'bg-green-100 text-green-800' : 
-                                app.status === 'rejected' ? 'bg-red-100 text-red-800' : 
-                                'bg-yellow-100 text-yellow-800'
-                              }`}
-                            >
-                              {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
-                            </span>
-                          </td>
-                          <td className="py-2 px-4 border-b">
-                            {app.rejection_reason || '-'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-            
-            {/* New Appointment Section */}
-            <div className="border p-4 rounded-lg">
-              <Title level={4} className="text-[#002F6C] mb-4">
-                Schedule New Appointment
+      <Content className="p-6 max-w-5xl mx-auto w-full">
+        <Card 
+          className="shadow-md"
+          title={
+            <div className="text-center">
+              <Title level={2} className="text-[#002F6C] m-0">
+                Schedule an Appointment with the Dean's Office
               </Title>
-              
-              {/* Name field */}
-              <div className="mb-4">
-                <Text strong>Name:</Text>
-                <Input 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter your full name"
-                  className="mt-1"
-                  disabled={!isAuthenticated()}
+            </div>
+          }
+        >
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Spin size="large" />
+            </div>
+          ) : error ? (
+            <Alert message="Error" description={error} type="error" showIcon className="mb-4" />
+          ) : (
+            <div>
+              {/* Authentication status */}
+              {!isAuthenticated() ? (
+                <Alert 
+                  message="Not authenticated" 
+                  description="Please log in to schedule an appointment." 
+                  type="warning" 
+                  showIcon 
+                  action={
+                    <Button size="small" type="primary" onClick={() => router.push("/login")}>
+                      Log in
+                    </Button>
+                  }
+                  className="mb-4"
                 />
-              </div>
-              
-              {/* Course selection - pre-filled from student data */}
-              <div className="mb-4">
-                <Text strong>Course:</Text>
-                <Select
-                  value={selectedCourse}
-                  onChange={(value) => setSelectedCourse(value)}
-                  className="w-full mt-1"
-                  disabled={!isAuthenticated()}
-                >
-                  {courseOptions.map(course => (
-                    <Option key={course} value={course}>{course}</Option>
-                  ))}
-                </Select>
-              </div>
-              
-              {/* Calendar with available dates */}
-              <div className="mb-4">
-                <Text strong>Select Date:</Text>
-                <Calendar
-                  fullscreen={false}
-                  onChange={handleCalendarChange}
-                  disabledDate={(date) => !isDateAvailable(date)}
-                  dateFullCellRender={dateCellRender}
-                  className="text-[#002F6C] mt-1"
-                />
-              </div>
-              
-              {/* Time selection */}
-              {selectedDate && (
-                <div className="mb-4">
-                  <Text strong>Select Time:</Text>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {availableTimes.length > 0 ? (
-                      availableTimes.map((time) => (
-                        <Button
-                          key={time}
-                          onClick={() => setSelectedTime(time)}
-                          className={`border-[#002F6C] hover:text-[#002F6C] hover:border-[#002F6C] ${
-                            selectedTime === time ? "bg-[#002F6C] text-white" : "text-[#002F6C]"
-                          }`}
-                        >
-                          {time.substring(0, 5)}
-                        </Button>
-                      ))
-                    ) : (
-                      <Alert message="No available time slots for this date" type="info" showIcon />
-                    )}
+              ) : (
+                <Card className="mb-4 bg-blue-50">
+                  <div className="flex justify-between items-center flex-wrap">
+                    <div>
+                      <Text strong className="text-lg">Student Information:</Text>
+                      <div className="mt-2">
+                        <p><strong>KBTU ID:</strong> {student?.user_data.kbtu_id}</p>
+                        <p><strong>Full Name:</strong> {student?.user_data.last_name} {student?.user_data.first_name}</p>
+                        <p><strong>Course:</strong> {student?.user_data.course}</p>
+                        <p><strong>Specialization:</strong> {student?.user_data.speciality}</p>
+                      </div>
+                    </div>
+                    <div className="flex space-x-2 mt-4 md:mt-0">
+                      <Button 
+                        type={selectedTab === "schedule" ? "primary" : "default"}
+                        onClick={() => setSelectedTab("schedule")}
+                        className={selectedTab === "schedule" ? "bg-[#002F6C]" : ""}
+                      >
+                        Schedule Appointment
+                      </Button>
+                      {/* Fixed the badge issue by using a wrapper div with Badge */}
+                      <div>
+                        <Badge count={getMyAppointments().length}>
+                          <Button 
+                            type={selectedTab === "myAppointments" ? "primary" : "default"}
+                            onClick={() => setSelectedTab("myAppointments")}
+                            className={selectedTab === "myAppointments" ? "bg-[#002F6C]" : ""}
+                          >
+                            My Appointments
+                          </Button>
+                        </Badge>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                </Card>
               )}
               
-              {/* Reason for visit */}
-              <div className="mb-4">
-                <Text strong>Reason for Visit:</Text>
-                <Input.TextArea
-                  rows={4}
-                  placeholder="Please briefly describe the reason for your visit"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  className="mt-1"
-                  disabled={!isAuthenticated()}
-                />
-              </div>
+              {/* My Appointments Section */}
+              {isAuthenticated() && selectedTab === "myAppointments" && (
+                <Card className="mb-4" title={<Title level={4}>My Appointments</Title>}>
+                  {getMyAppointments().length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full bg-white border border-gray-200">
+                        <thead className="bg-gray-100">
+                          <tr>
+                            <th className="py-3 px-4 border-b text-left">Date</th>
+                            <th className="py-3 px-4 border-b text-left">Time</th>
+                            <th className="py-3 px-4 border-b text-left">Reason</th>
+                            <th className="py-3 px-4 border-b text-left">Status</th>
+                            <th className="py-3 px-4 border-b text-left">Note</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {getMyAppointments().map((app) => (
+                            <tr key={app.id} className="hover:bg-gray-50">
+                              <td className="py-3 px-4 border-b">{dayjs(app.date).format('DD.MM.YYYY')}</td>
+                              <td className="py-3 px-4 border-b">{app.time.substring(0, 5)}</td>
+                              <td className="py-3 px-4 border-b">{app.name}</td>
+                              <td className="py-3 px-4 border-b">
+                                {getStatusBadge(app.status)}
+                              </td>
+                              <td className="py-3 px-4 border-b">
+                                {app.rejection_reason || '-'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <Alert 
+                      message="You have no appointments" 
+                      description="You can create a new appointment in the 'Schedule Appointment' tab." 
+                      type="info" 
+                      showIcon 
+                    />
+                  )}
+                </Card>
+              )}
               
-              {/* Schedule button */}
-              <div className="text-center mt-6">
-                <Button
-                  type="primary"
-                  size="large"
-                  className="bg-[#002F6C] hover:bg-blue-700"
-                  onClick={handleReserveClick}
-                  disabled={!isAuthenticated() || !selectedDate || !selectedTime || !name}
-                >
-                  Schedule Appointment
-                </Button>
-              </div>
+              {/* New Appointment Section */}
+              {(selectedTab === "schedule" || !isAuthenticated()) && (
+                <Card className="mb-4">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {/* Left side - calendar and time selection */}
+                    <div>
+                      <Text strong className="text-lg block mb-2">Select a date:</Text>
+                      <Calendar
+                        fullscreen={false}
+                        onChange={handleCalendarChange}
+                        disabledDate={(date) => !isDateAvailable(date)}
+                        dateFullCellRender={dateCellRender}
+                        className="border p-2 rounded-lg shadow-sm"
+                      />
+                      
+                      {/* Time selection */}
+                      {selectedDate && (
+                        <div className="mt-4">
+                          <Text strong className="text-lg block mb-2">Select a time:</Text>
+                          <div className="grid grid-cols-4 gap-2">
+                            {availableTimes.length > 0 ? (
+                              availableTimes.map((time) => (
+                                <Button
+                                  key={time}
+                                  onClick={() => setSelectedTime(time)}
+                                  className={`border-[#002F6C] hover:text-[#002F6C] hover:border-[#002F6C] ${
+                                    selectedTime === time ? "bg-[#002F6C] text-white" : "text-[#002F6C]"
+                                  }`}
+                                >
+                                  {time.substring(0, 5)}
+                                </Button>
+                              ))
+                            ) : (
+                              <Alert message="No available slots for the selected date" type="info" showIcon className="col-span-4" />
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Right side - appointment details */}
+                    <div>
+                      {/* Course selection - pre-filled from student data */}
+                      <div className="mb-4">
+                        <Text strong className="text-lg block mb-2">Course:</Text>
+                        <Select
+                          value={selectedCourse}
+                          onChange={(value) => setSelectedCourse(value)}
+                          className="w-full"
+                          disabled={!isAuthenticated()}
+                          size="large"
+                        >
+                          {courseOptions.map(course => (
+                            <Option key={course} value={course}>{course}</Option>
+                          ))}
+                        </Select>
+                      </div>
+                      
+                      {/* Reason for visit - THE MAIN FIELD */}
+                      <div className="mb-4">
+                        <Text strong className="text-lg block mb-2">
+                          Reason for visit: <span className="text-red-500">*</span>
+                        </Text>
+                        
+                        {/* Quick select common reasons */}
+                        <div className="mb-2">
+                          <Text className="mb-1 block">Common reasons:</Text>
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            {commonReasons.slice(0, 4).map((reason) => (
+                              <Button 
+                                key={reason} 
+                                onClick={() => handleCommonReasonSelect(reason)}
+                                className={appointmentReason === reason ? "border-blue-500 text-blue-500" : ""}
+                              >
+                                {reason}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <TextArea
+                          rows={4}
+                          placeholder="Specify the reason for your visit to the dean's office"
+                          value={appointmentReason}
+                          onChange={(e) => setAppointmentReason(e.target.value)}
+                          className={`${!appointmentReason && 'border-red-300'}`}
+                          disabled={!isAuthenticated()}
+                          size="large"
+                        />
+                        {!appointmentReason && (
+                          <Text type="danger" className="mt-1">Required field</Text>
+                        )}
+                      </div>
+                      
+                      {/* Appointment summary */}
+                      {selectedDate && selectedTime && (
+                        <Card className="bg-blue-50 mb-4" size="small" title="Appointment Details">
+                          <p><strong>Date:</strong> {dayjs(selectedDate).format('DD.MM.YYYY')}</p>
+                          <p><strong>Time:</strong> {selectedTime?.substring(0, 5)}</p>
+                          <p><strong>Reason:</strong> {appointmentReason || '(not specified)'}</p>
+                        </Card>
+                      )}
+                      
+                      {/* Schedule button */}
+                      <div className="text-center mt-6">
+                        <Button
+                          type="primary"
+                          size="large"
+                          className="bg-[#002F6C] hover:bg-blue-700 h-12 px-8 text-lg"
+                          onClick={handleReserveClick}
+                          disabled={!isAuthenticated() || !selectedDate || !selectedTime || !appointmentReason}
+                        >
+                          Schedule Appointment
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              )}
+              
+              {/* Help section */}
+              <Alert
+                message="Appointment Information"
+                description={
+                  <ul className="list-disc pl-5 mt-2">
+                    <li>Appointments are available only on weekdays.</li>
+                    <li>Please specify the reason for your visit to ensure proper preparation for your appointment.</li>
+                    <li>The status of your appointment will be updated after processing by a manager.</li>
+                    <li>If you have any questions, please call: +7 (727) 123-45-67.</li>
+                  </ul>
+                }
+                type="info"
+                showIcon
+              />
             </div>
-          </div>
-        )}
+          )}
+        </Card>
       </Content>
       
       {/* Confirmation Modal */}
       <Modal
-        title="Confirm Appointment"
+        title={<Title level={4} className="text-[#002F6C]">Appointment Confirmation</Title>}
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
         footer={[
@@ -533,20 +616,21 @@ export default function AppointmentQueue() {
         ]}
       >
         {student && (
-          <div className="mb-4">
-            <p><strong>Student:</strong> {name}</p>
-            <p><strong>KBTU ID:</strong> {student.user_data.kbtu_id}</p>
-            <p><strong>Course:</strong> {selectedCourse}</p>
-            <p><strong>Specialty:</strong> {student.user_data.speciality}</p>
-            <p><strong>Date:</strong> {selectedDate}</p>
-            <p><strong>Time:</strong> {selectedTime?.substring(0, 5)}</p>
-            <p><strong>Reason:</strong> {reason}</p>
+          <div>
+            <div className="p-4 border rounded bg-blue-50 mb-4">
+              <p><strong>Student Name:</strong> {student.user_data.last_name} {student.user_data.first_name}</p>
+              <p><strong>KBTU ID:</strong> {student.user_data.kbtu_id}</p>
+              <p><strong>Course:</strong> {selectedCourse}</p>
+              <p><strong>Specialization:</strong> {student.user_data.speciality}</p>
+              <p><strong>Date:</strong> {dayjs(selectedDate).format('DD.MM.YYYY')}</p>
+              <p><strong>Time:</strong> {selectedTime?.substring(0, 5)}</p>
+              <p><strong>Reason for visit:</strong> {appointmentReason}</p>
+            </div>
             <Alert 
               message="Note" 
-              description="Your appointment will be pending until approved by a manager." 
+              description="Your appointment will be in 'Pending' status until confirmed by a manager." 
               type="info" 
               showIcon 
-              className="mt-4"
             />
           </div>
         )}
