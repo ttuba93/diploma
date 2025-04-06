@@ -11,25 +11,23 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
-// Updated TypeScript interfaces to match API response format
-interface Student {
-  id: number;
-  first_name: string;
-  last_name: string;
-  middle_name: string;
-  kbtu_id: string;
-  email: string;
-  school: string;
-  speciality: string;
-  course: number;
-  telephone_number: string;
-  role: string;
-  user: number;
-}
-
+// Define proper TypeScript interfaces
 interface Appointment {
   id: number;
-  student: Student | number;
+  student: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    middle_name: string;
+    kbtu_id: string;
+    email: string;
+    school: string;
+    speciality: string;
+    course: number;
+    telephone_number: string;
+    role: string;
+    user: number;
+  };
   name: string;
   course: string;
   specialty: string;
@@ -42,8 +40,8 @@ interface Appointment {
 
 // API service for appointments
 const appointmentService = {
-  baseUrl: "http://127.0.0.1:8000/api/appointments/",
-  
+  baseUrl: "http://localhost:8000/api/appointments/",
+
   async getAll(): Promise<Appointment[]> {
     try {
       const response = await axios.get(this.baseUrl);
@@ -53,7 +51,7 @@ const appointmentService = {
       throw error;
     }
   },
-  
+
   async update(id: number, data: Partial<Appointment>): Promise<Appointment> {
     try {
       const response = await axios.patch(`${this.baseUrl}${id}/`, data);
@@ -70,42 +68,48 @@ export default function ManagerDashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  
+
   // State for rejection modal
   const [isRejectionModalOpen, setIsRejectionModalOpen] = useState<boolean>(false);
   const [rejectionReason, setRejectionReason] = useState<string>("");
   const [currentAppointment, setCurrentAppointment] = useState<Appointment | null>(null);
-  
+
   // State for filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [courseFilter, setCourseFilter] = useState<string>("all");
   const [searchText, setSearchText] = useState<string>("");
-  
-  // State for manager ID
-  const [managerId, setManagerId] = useState<number | null>(1);
 
-  // Fetch appointments from API
+  // State for manager ID (would typically come from auth context)
+  const [managerId, setManagerId] = useState<number | null>(1); // Default to 1 for updates
+
+  // Helper function to get student's full name
+  const getStudentFullName = (student: { id?: number; first_name: any; last_name: any; middle_name: any; kbtu_id?: string; email?: string; school?: string; speciality?: string; course?: number; telephone_number?: string; role?: string; user?: number; }) => {
+    return `${student.last_name} ${student.first_name} ${student.middle_name}`;
+  };
+
+  // Fetch appointments from API - now gets all appointments
   const fetchAppointments = async () => {
     setLoading(true);
     try {
       const data = await appointmentService.getAll();
       console.log("Fetched appointments:", data); // Debug log
       setAppointments(data);
-      setFilteredAppointments(data);
+      setFilteredAppointments(data); // Initialize filtered appointments
       setLoading(false);
     } catch (error) {
-      console.error("Error fetching appointments:", error);
       message.error("Failed to load appointments");
       setLoading(false);
     }
   };
 
-  // Load manager ID from storage
+  // Load manager ID from session/local storage or auth context - for updates only
   useEffect(() => {
+    // In a real app, this would come from your auth system
     const loggedInManagerId = localStorage.getItem("managerId");
     if (loggedInManagerId) {
       setManagerId(parseInt(loggedInManagerId));
     } else {
+      // For development, set a default manager ID if none is found
       setManagerId(1);
     }
   }, []);
@@ -113,38 +117,36 @@ export default function ManagerDashboard() {
   // Fetch appointments when component mounts
   useEffect(() => {
     fetchAppointments();
-  }, []);
+  }, []); // Removed manager dependency
 
   // Apply filters whenever appointments, filters, or search text changes
   useEffect(() => {
     if (!appointments.length) return;
-    
+
     let filtered = [...appointments];
-    
+
     // Filter by status
     if (statusFilter !== "all") {
       filtered = filtered.filter(app => app.status === statusFilter);
     }
-    
+
     // Filter by course
     if (courseFilter !== "all") {
       filtered = filtered.filter(app => app.course === courseFilter);
     }
-    
+
     // Filter by search text
     if (searchText) {
       const lowerSearchText = searchText.toLowerCase();
       filtered = filtered.filter(app => {
-        const name = app.name.toLowerCase();
-        const specialty = app.specialty.toLowerCase();
-        const studentId = typeof app.student === 'object' ? app.student.kbtu_id : '';
-        
-        return name.includes(lowerSearchText) || 
-               specialty.includes(lowerSearchText) || 
-               studentId.includes(lowerSearchText);
+        const fullName = getStudentFullName(app.student).toLowerCase();
+        return app.name.toLowerCase().includes(lowerSearchText) ||
+          app.student.kbtu_id.toLowerCase().includes(lowerSearchText) ||
+          app.specialty.toLowerCase().includes(lowerSearchText) ||
+          fullName.includes(lowerSearchText);
       });
     }
-    
+
     setFilteredAppointments(filtered);
   }, [appointments, statusFilter, courseFilter, searchText]);
 
@@ -157,12 +159,12 @@ export default function ManagerDashboard() {
         status: "approved",
         manager: managerId
       });
-      
-      // Update local state
-      setAppointments(appointments.map(app => 
+
+      // Update local state with the server response
+      setAppointments(appointments.map(app =>
         app.id === updatedAppointment.id ? updatedAppointment : app
       ));
-      
+
       message.success(`Appointment for ${appointment.name} has been approved.`);
     } catch (error) {
       message.error("Failed to approve appointment");
@@ -183,18 +185,18 @@ export default function ManagerDashboard() {
     if (currentAppointment) {
       setLoading(true);
       try {
-        // Update appointment with rejected status
+        // Update appointment with rejected status, rejection reason, and current manager
         const updatedAppointment = await appointmentService.update(currentAppointment.id, {
           status: "rejected",
-          rejection_reason: rejectionReason || "",
+          rejection_reason: rejectionReason || "", // Send empty string if no reason provided
           manager: managerId
         });
-        
-        // Update local state
-        setAppointments(appointments.map(app => 
+
+        // Update local state with the server response
+        setAppointments(appointments.map(app =>
           app.id === updatedAppointment.id ? updatedAppointment : app
         ));
-        
+
         setIsRejectionModalOpen(false);
         message.info(`Appointment for ${currentAppointment.name} has been rejected.`);
       } catch (error) {
@@ -205,32 +207,19 @@ export default function ManagerDashboard() {
     }
   };
 
-  // Helper function to get student ID
-  const getStudentId = (appointment: Appointment) => {
-    if (typeof appointment.student === 'object' && appointment.student !== null) {
-      return appointment.student.kbtu_id;
-    }
-    return appointment.student.toString();
-  };
-
-  // Helper function to get full student name
-  const getStudentFullName = (appointment: Appointment) => {
-    if (typeof appointment.student === 'object' && appointment.student !== null) {
-      return `${appointment.student.first_name} ${appointment.student.last_name}`;
-    }
-    return appointment.name;
-  };
-
   // Table columns
   const columns = [
     {
       title: "Student ID",
       key: "studentId",
       width: 120,
-      render: (record: Appointment) => 
-        typeof record.student === 'object' && record.student !== null 
-          ? record.student.kbtu_id 
-          : record.student.toString(),
+      render: (record: Appointment) => record.student.kbtu_id,
+    },
+    {
+      title: "Student Full Name",
+      key: "studentFullName",
+      width: 200,
+      render: (record: Appointment) => getStudentFullName(record.student),
     },
     {
       title: "Name",
@@ -323,7 +312,7 @@ export default function ManagerDashboard() {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            
+
             <Select
               defaultValue="all"
               style={{ width: 150 }}
@@ -334,7 +323,7 @@ export default function ManagerDashboard() {
               <Option value="approved">Approved</Option>
               <Option value="rejected">Rejected</Option>
             </Select>
-            
+
             <Select
               defaultValue="all"
               style={{ width: 150 }}
@@ -356,7 +345,7 @@ export default function ManagerDashboard() {
                 </Title>
               </div>
             </Badge.Ribbon>
-            
+
             <Badge.Ribbon text="Approved" color="green">
               <div className="bg-green-50 p-4 rounded-lg min-w-32">
                 <Title level={4} className="mt-0">
@@ -364,7 +353,7 @@ export default function ManagerDashboard() {
                 </Title>
               </div>
             </Badge.Ribbon>
-            
+
             <Badge.Ribbon text="Rejected" color="red">
               <div className="bg-red-50 p-4 rounded-lg min-w-32">
                 <Title level={4} className="mt-0">
@@ -388,7 +377,7 @@ export default function ManagerDashboard() {
             rowKey="id"
             loading={loading}
             pagination={{ pageSize: 10 }}
-            scroll={{ x: 1200 }}
+            scroll={{ x: 1400 }}
           />
         </div>
 
@@ -405,10 +394,7 @@ export default function ManagerDashboard() {
           >
             <div>
               <p>
-                <Text strong>Student:</Text> {currentAppointment.name}
-                {typeof currentAppointment.student === 'object' && currentAppointment.student !== null && (
-                  <> ({currentAppointment.student.kbtu_id})</>
-                )}
+                <Text strong>Student:</Text> {getStudentFullName(currentAppointment.student)} ({currentAppointment.student.kbtu_id})
               </p>
               <p>
                 <Text strong>Course:</Text> {currentAppointment.course}
