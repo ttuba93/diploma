@@ -252,7 +252,7 @@ export default function DocumentsPage() {
         end_date: values.end_date ? values.end_date.format('YYYY-MM-DD') : undefined,
         current_year: new Date().getFullYear(),
         // For auto mode, use the student ID from user data
-        student: formMode === 'auto' && student ? student.user_data.id.toString() : "2"
+        student: formMode === 'auto' && student ? student.user_data.id.toString() : null
       };
 
       console.log("Submitting form data:", formData);
