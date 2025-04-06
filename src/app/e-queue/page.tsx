@@ -39,7 +39,7 @@ interface Appointment {
   time: string;
   status: 'pending' | 'approved' | 'rejected';
   rejection_reason?: string;
-  manager?: number;
+  manager?: 1;
   course: string;
   specialty: string;
 }
