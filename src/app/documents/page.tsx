@@ -397,7 +397,7 @@ export default function DocumentsPage() {
           title={selectedDocument?.name}
           open={isModalVisible}
           onCancel={handleCancel}
-          width={800}
+          width={500}
           footer={[
             <Button 
               key="download" 
@@ -484,7 +484,7 @@ export default function DocumentsPage() {
             <iframe
               src={filledDocumentUrl}
               width="100%"
-              height="100px"
+              height="50px"
               title="Filled Document"
               style={{ border: "none" }}
             ></iframe>
