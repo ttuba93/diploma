@@ -462,7 +462,7 @@ export default function DocumentsPage() {
         {/* Filled Document Display Modal */}
         <Modal
           title="Your Filled Document"
-          // open={showFilledDocument}
+          open={showFilledDocument}
           onCancel={handleFilledDocCancel}
           width={800}
           footer={[
