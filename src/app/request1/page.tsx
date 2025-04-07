@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from "react";
 import { Layout, Button, Steps, message, Upload } from "antd";
 import HeaderSession from "../components/Header";
 import { Footer } from "../components/Footer";
-import { useRouter } from "next/navigation"; // Import for navigation
 
 const { Content } = Layout;
 
@@ -35,7 +34,6 @@ const studentSteps = [
 ];
 
 export default function StudentRequests() {
-  const router = useRouter(); // Initialize the router
   const [loading, setLoading] = useState(false);
   const [processId, setProcessId] = useState<string | null>(localStorage.getItem("processId"));
   const [currentStep, setCurrentStep] = useState(Number(localStorage.getItem("currentStep")) || 0);
@@ -109,11 +107,6 @@ export default function StudentRequests() {
   };
 
   const startNewProcess = async () => {
-    // Navigate to request1 page
-    router.push('/request1');
-    
-    // If you still want to keep the original functionality, you can maintain it below
-    // But it might not execute fully due to the navigation
     setLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/start-process/`, {
