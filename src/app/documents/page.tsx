@@ -397,7 +397,7 @@ export default function DocumentsPage() {
           title={selectedDocument?.name}
           open={isModalVisible}
           onCancel={handleCancel}
-          width={500}
+          width={800}
           footer={[
             <Button 
               key="download" 
@@ -439,7 +439,7 @@ export default function DocumentsPage() {
           title={`Fill ${selectedDocument?.name}`}
           open={isFormModalVisible}
           onCancel={handleFormCancel}
-          width={600}
+          width={300}
           footer={null}
         >
           <Form
@@ -464,7 +464,7 @@ export default function DocumentsPage() {
           title="Your Filled Document"
           open={showFilledDocument}
           onCancel={handleFilledDocCancel}
-          width={800}
+          width={400}
           footer={[
             <Button 
               key="download" 
@@ -484,7 +484,7 @@ export default function DocumentsPage() {
             <iframe
               src={filledDocumentUrl}
               width="100%"
-              height="50px"
+              height="10px"
               title="Filled Document"
               style={{ border: "none" }}
             ></iframe>
