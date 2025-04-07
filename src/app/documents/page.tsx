@@ -464,7 +464,7 @@ export default function DocumentsPage() {
           title="Your Filled Document"
           open={showFilledDocument}
           onCancel={handleFilledDocCancel}
-          width={800}
+          width={200}
           footer={[
             <Button 
               key="download" 
