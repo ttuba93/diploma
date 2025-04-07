@@ -92,7 +92,7 @@ export default function StudentDashboard() {
   const fetchStudentRequests = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/faq-requests/student/2/`);
+      const response = await fetch(`${API_BASE_URL}/faq-requests/student/1/`);
       if (response.ok) {
         const data = await response.json();
         setStudentRequests(Array.isArray(data) ? data : [data]);
