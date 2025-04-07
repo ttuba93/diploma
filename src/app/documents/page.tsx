@@ -7,7 +7,15 @@ import { Footer } from "../components/Footer";
 import SearchSection from "../components/SearchSectionDoc";
 import mammoth from "mammoth";
 
+// Simplified image imports - only using the two highlighted images
+// Images should be in /public/images directory
+const templateImage = "/images/sample.jpg"; // For document templates
+const filledImage = "/images/filled.jpg";   // For filled documents
+
 const { Content } = Layout;
+
+// Определяем константу для цвета кнопок
+const BUTTON_COLOR = "#002F6C";
 
 interface Document {
   id: number;
@@ -141,23 +149,6 @@ export default function DocumentsPage() {
   const showDocumentModal = async (doc: Document) => {
     setSelectedDocument(doc);
     setIsModalVisible(true);
-
-    const fileExtension = doc.file.split(".").pop()?.toLowerCase();
-
-    if (fileExtension === "docx") {
-      setLoading(true);
-      try {
-        const response = await fetch(doc.file);
-        const arrayBuffer = await response.arrayBuffer();
-        const { value } = await mammoth.convertToHtml({ arrayBuffer });
-        setDocxContent(value);
-      } catch (error) {
-        console.error("Error processing DOCX:", error);
-        setDocxContent("Error loading document.");
-      } finally {
-        setLoading(false);
-      }
-    }
   };
 
   const handleCancel = () => {
@@ -274,10 +265,10 @@ export default function DocumentsPage() {
       
       // Get the document ID and construct PDF URL
       const documentId = result.id;
-      const documentUrl = `http://localhost:8000/api/${pdfEndpoint.replace('{id}', documentId)}`;
+      const actualDocumentUrl = `http://localhost:8000/api/${pdfEndpoint.replace('{id}', documentId)}`;
       
-      // Set the filled document URL and show the document
-      setFilledDocumentUrl(documentUrl);
+      // Set filled document URL for download
+      setFilledDocumentUrl(actualDocumentUrl);
       setShowFilledDocument(true);
       
       message.success('Document successfully filled!');
@@ -291,25 +282,19 @@ export default function DocumentsPage() {
     }
   };
 
+  // Рендер изображения документа (шаблон)
   const renderDocumentViewer = () => {
     if (!selectedDocument) return null;
-
-    const fileExtension = selectedDocument.file.split(".").pop()?.toLowerCase();
-
-    if (fileExtension === "pdf") {
-      return (
-        <iframe
-          src={encodeURI(selectedDocument.file)}
-          width="100%"
-          height="500px"
-          title={selectedDocument.name}
-        ></iframe>
-      );
-    } else if (fileExtension === "docx") {
-      return loading ? <Spin /> : <div dangerouslySetInnerHTML={{ __html: docxContent || "" }} />;
-    } else {
-      return <p>Unsupported file format.</p>;
-    }
+    
+    return (
+      <div style={{ textAlign: 'center' }}>
+        <img 
+          src={templateImage} 
+          alt={selectedDocument.name}
+          style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }}
+        />
+      </div>
+    );
   };
 
   // Render form fields based on the selected document
@@ -404,11 +389,16 @@ export default function DocumentsPage() {
               type="primary" 
               href={selectedDocument ? selectedDocument.file : '#'} 
               download
+              style={{ backgroundColor: BUTTON_COLOR, borderColor: BUTTON_COLOR }}
             >
               Download Template
             </Button>,
             isFillableDocument(selectedDocument) && (
-              <Button key="fill-manually" onClick={handleFillManually}>
+              <Button 
+                key="fill-manually" 
+                onClick={handleFillManually}
+                style={{ backgroundColor: BUTTON_COLOR, borderColor: BUTTON_COLOR, color: "white" }}
+              >
                 Fill Manually
               </Button>
             ),
@@ -421,12 +411,17 @@ export default function DocumentsPage() {
                   onClick={handleFillAutomatically} 
                   disabled={!isAuthenticated()}
                   type="primary"
+                  style={{ backgroundColor: BUTTON_COLOR, borderColor: BUTTON_COLOR }}
                 >
                   Fill Automatically
                 </Button>
               </Tooltip>
             ),
-            <Button key="cancel" onClick={handleCancel}>
+            <Button 
+              key="cancel" 
+              onClick={handleCancel}
+              style={{ backgroundColor: "white", borderColor: BUTTON_COLOR, color: BUTTON_COLOR }}
+            >
               Close
             </Button>
           ]}
@@ -449,10 +444,18 @@ export default function DocumentsPage() {
           >
             {renderFormFields()}
             <Form.Item>
-              <Button type="primary" htmlType="submit" loading={loading}>
+              <Button 
+                type="primary" 
+                htmlType="submit" 
+                loading={loading}
+                style={{ backgroundColor: BUTTON_COLOR, borderColor: BUTTON_COLOR }}
+              >
                 Generate Document
               </Button>
-              <Button onClick={handleFormCancel} style={{ marginLeft: 8 }}>
+              <Button 
+                onClick={handleFormCancel} 
+                style={{ marginLeft: 8, borderColor: BUTTON_COLOR, color: BUTTON_COLOR }}
+              >
                 Cancel
               </Button>
             </Form.Item>
@@ -472,22 +475,28 @@ export default function DocumentsPage() {
               href={filledDocumentUrl || '#'} 
               target="_blank"
               download
+              style={{ backgroundColor: BUTTON_COLOR, borderColor: BUTTON_COLOR }}
             >
               Download Document
             </Button>,
-            <Button key="close" onClick={handleFilledDocCancel}>
+            <Button 
+              key="close" 
+              onClick={handleFilledDocCancel}
+              style={{ backgroundColor: "white", borderColor: BUTTON_COLOR, color: BUTTON_COLOR }}
+            >
               Close
             </Button>
           ]}
         >
           {filledDocumentUrl && (
-            <iframe
-              src={filledDocumentUrl}
-              width="100%"
-              height="10px"
-              title="Filled Document"
-              style={{ border: "none" }}
-            ></iframe>
+            <div style={{ textAlign: 'center' }}>
+              {/* Use filled.jpg for filled documents */}
+              <img 
+                src={filledImage} 
+                alt="Filled Document"
+                style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain' }}
+              />
+            </div>
           )}
         </Modal>
         
