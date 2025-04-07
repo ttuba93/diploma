@@ -1,148 +1,165 @@
 'use client';
 
-import { useEffect, useState, useRef } from "react";
-import { Layout, Button, Steps, message, Upload } from "antd";
+import { useEffect, useState } from "react";
+import { Layout, Button, List, Card, Tag, Collapse, Empty, Spin, message } from "antd";
 import HeaderSession from "../components/Header";
 import { Footer } from "../components/Footer";
-import { useRouter } from "next/navigation"; // Import for navigation
 
 const { Content } = Layout;
+const { Panel } = Collapse;
 
 const API_BASE_URL = "http://localhost:8000/api";
 
-// Шаги процесса, которые касаются студента
-const studentSteps = [
-  {
-    title: "Запрос отправлен",
-    key: "request_sent"
-  },
-  {
-    title: "Загрузка документа",
-    key: "upload_docs"
-  },
-  {
-    title: "Документы отправлены",
-    key: "docs_sent"
-  },
-  {
-    title: "Проверка документов",
-    key: "waiting_for_verification"
-  },
-  {
-    title: "Статус документов", // Динамически отображает принято или отклонено
-    key: "docs_status"
-  }
-];
+// Define interfaces for type safety
+interface Student {
+  first_name: string;
+  last_name: string;
+  kbtu_id: string;
+  course: number;
+  speciality: string;
+}
 
-export default function StudentRequests() {
-  const router = useRouter(); // Initialize the router
-  const [loading, setLoading] = useState(false);
-  const [processId, setProcessId] = useState<string | null>(localStorage.getItem("processId"));
-  const [currentStep, setCurrentStep] = useState(Number(localStorage.getItem("currentStep")) || 0);
-  const [taskId, setTaskId] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [username, setUsername] = useState<string | null>("");
-  const [feedbackReceived, setFeedbackReceived] = useState<string | null>(localStorage.getItem("feedbackReceived"));
-  const [docsRejected, setDocsRejected] = useState(Boolean(localStorage.getItem("docsRejected")) === true);
-  const [docsAccepted, setDocsAccepted] = useState(Boolean(localStorage.getItem("docsAccepted")) === true);
-  const [verificationStartTime, setVerificationStartTime] = useState<number | null>(
-    Number(localStorage.getItem("verificationStartTime")) || null
-  );
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+interface Question {
+  id: number;
+  topic: string;
+  description: string;
+  answer: string | null;
+  is_answered: boolean;
+  created_at: string;
+  student?: Student;
+}
+
+interface ActiveRequest {
+  id: string | null;
+  currentStep: number;
+  docsAccepted: boolean;
+  docsRejected: boolean;
+  feedbackReceived: string | null;
+}
+
+interface RequestType {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export default function StudentFaqRequests() {
+  const [loading, setLoading] = useState<boolean>(false);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [activeRequests, setActiveRequests] = useState<ActiveRequest[]>([]);
+  const [username, setUsername] = useState<string>("");
+  const [studentId, setStudentId] = useState<string>("");
+  const [studentDetails, setStudentDetails] = useState<Student | null>(null);
+  const [requestTypes, setRequestTypes] = useState<RequestType[]>([
+    { id: "transcript", name: "Транскрипт", description: "Запрос на получение транскрипта" },
+    { id: "certificate", name: "Справка с места учебы", description: "Запрос на получение справки с места учебы" },
+    { id: "schedule", name: "Расписание занятий", description: "Запрос на получение расписания занятий" },
+    { id: "military", name: "Справка для военкомата", description: "Запрос на получение справки для военкомата" }
+  ]);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       const userData = JSON.parse(storedUser);
       setUsername(userData.username);
+      // Assuming the student ID is stored in the user object or can be derived from it
+      // For demo purposes, we'll use "21B000001" from the screenshot
+      setStudentId("21B000001");
+      fetchStudentDetails();
+      fetchQuestions();
+      fetchActiveRequests();
     }
   }, []);
 
-  // Автоматическое одобрение документов по истечении таймаута
-  useEffect(() => {
-    if (currentStep === 3 && verificationStartTime) {
-      const currentTime = Date.now();
-      const elapsedTime = currentTime - verificationStartTime;
-      const timeoutDuration = 10000; // 30 секунд в миллисекундах
-
-      // Если прошло меньше 30 секунд, устанавливаем таймер на оставшееся время
-      if (elapsedTime < timeoutDuration) {
-        const remainingTime = timeoutDuration - elapsedTime;
-        
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
-        
-        timeoutRef.current = setTimeout(() => {
-          // Автоматически устанавливаем статус "принято"
-          setDocsAccepted(true);
-          localStorage.setItem("docsAccepted", "true");
-          setCurrentStep(4);
-          localStorage.setItem("currentStep", "4");
-          message.success("Документы автоматически приняты");
-        }, remainingTime);
-      } 
-      // Если уже прошло больше 30 секунд и статус еще не определен
-      else if (!docsAccepted && !docsRejected) {
-        setDocsAccepted(true);
-        localStorage.setItem("docsAccepted", "true");
-        setCurrentStep(4);
-        localStorage.setItem("currentStep", "4");
-        message.success("Документы автоматически приняты");
+  const fetchStudentDetails = async () => {
+    try {
+      // Using the API endpoint shown in the screenshot
+      const response = await fetch(`${API_BASE_URL}/faq-requests/student/1/`);
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        setStudentDetails(data[0].student);
       }
+    } catch (error) {
+      console.error("Error fetching student details:", error);
+      message.error("Не удалось загрузить информацию о студенте");
     }
-    
-    // Очистка таймера при размонтировании компонента
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [currentStep, verificationStartTime, docsAccepted, docsRejected]);
-
-  const getStepFromTask = (taskName: string) => {
-    if (taskName.includes("Send required documents")) return 1;
-    if (taskName.includes("Documents Verification")) return 3;
-    if (taskName.includes("Set status Denied")) return 4;
-    if (taskName.includes("Receive a feedback")) return 4;
-    return 0;
   };
 
-  const startNewProcess = async () => {
-    // Navigate to request1 page
-    router.push('/request1');
-    
-    // If you still want to keep the original functionality, you can maintain it below
-    // But it might not execute fully due to the navigation
+  const fetchQuestions = async () => {
+    setLoading(true);
+    try {
+      // Using the API endpoint shown in the screenshot
+      const response = await fetch(`${API_BASE_URL}/faq-requests/student/1/`);
+      const data = await response.json();
+      
+      // Filter questions that are not part of active requests
+      setQuestions(data || []);
+    } catch (error) {
+      console.error("Error fetching questions:", error);
+      message.error("Не удалось загрузить вопросы");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchActiveRequests = async () => {
+    setLoading(true);
+    try {
+      // This would be a separate endpoint for active document requests
+      // For now, we'll simulate this with the existing data structure from the code
+      const requests: ActiveRequest[] = [];
+      
+      // Here we're simulating the steps from the original code
+      if (localStorage.getItem("processId")) {
+        const currentStep = Number(localStorage.getItem("currentStep")) || 0;
+        const docsAccepted = Boolean(localStorage.getItem("docsAccepted")) === true;
+        const docsRejected = Boolean(localStorage.getItem("docsRejected")) === true;
+        const feedbackReceived = localStorage.getItem("feedbackReceived");
+        
+        requests.push({
+          id: localStorage.getItem("processId"),
+          currentStep,
+          docsAccepted,
+          docsRejected,
+          feedbackReceived
+        });
+      }
+      
+      setActiveRequests(requests);
+    } catch (error) {
+      console.error("Error fetching active requests:", error);
+      message.error("Не удалось загрузить активные запросы");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startNewProcess = async (requestTypeId: string) => {
     setLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/start-process/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ student_id: "12345", initiator: username }),
+        body: JSON.stringify({ 
+          student_id: studentId || "12345", 
+          initiator: username,
+          request_type: requestTypeId
+        }),
       });
       const data = await response.json();
+      
       if (data.processInstanceId) {
         message.success("Процесс запущен!");
-        setProcessId(data.processInstanceId);
         localStorage.setItem("processId", data.processInstanceId);
-        setCurrentStep(1);
         localStorage.setItem("currentStep", "1");
-        // Сбрасываем статусы при начале нового процесса
-        setDocsAccepted(false);
-        setDocsRejected(false);
         localStorage.removeItem("docsAccepted");
         localStorage.removeItem("docsRejected");
-        setFeedbackReceived(null);
         localStorage.removeItem("feedbackReceived");
-        setVerificationStartTime(null);
         localStorage.removeItem("verificationStartTime");
         
-        // Очищаем таймер при запуске нового процесса
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
+        // Redirect to the student requests page
+        window.location.href = "/student-requests";
       } else {
         message.error("Ошибка запуска процесса");
       }
@@ -152,254 +169,184 @@ export default function StudentRequests() {
     setLoading(false);
   };
 
-  const fetchProcessStatus = async () => {
-    if (!processId) return;
-
-    try {
-      // Получаем задачи, назначенные на текущего пользователя
-      const tasksResponse = await fetch(`${API_BASE_URL}/tasks/?user_id=${username}`);
-      const tasks = await tasksResponse.json();
-      const task = tasks.find((t: any) => t.processInstanceId === processId);
-
-      if (task) {
-        const step = getStepFromTask(task.name);
-        setTaskId(task.id);
-      }
-
-      // Проверяем результат верификации документов
-      if (currentStep === 3 || currentStep === 4) {
-        const verificationResponse = await fetch(`${API_BASE_URL}/process/${processId}/status/`);
-        const statusData = await verificationResponse.json();
-        
-        if (statusData.docsVerified === false) {
-          setDocsRejected(true);
-          localStorage.setItem("docsRejected", "true");
-          setCurrentStep(4);
-          localStorage.setItem("currentStep", "4");
-          
-          // Очищаем таймер при получении отрицательного ответа
-          if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-          }
-          
-          // Проверяем, получен ли отзыв
-          if (statusData.feedbackText) {
-            setFeedbackReceived(statusData.feedbackText);
-            localStorage.setItem("feedbackReceived", statusData.feedbackText);
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Ошибка загрузки статуса", error);
+  const renderQuestionsList = () => {
+    if (loading) {
+      return <Spin size="large" />;
     }
+
+    if (questions.length === 0) {
+      return <Empty description="У вас пока нет вопросов" />;
+    }
+
+    return (
+      <List
+        itemLayout="vertical"
+        dataSource={questions}
+        renderItem={(item: Question) => (
+          <List.Item
+            key={item.id}
+            extra={
+              <div>
+                <Tag color={item.is_answered ? "green" : "orange"}>
+                  {item.is_answered ? "Отвечен" : "Ожидает ответа"}
+                </Tag>
+                <div>{new Date(item.created_at).toLocaleDateString()}</div>
+              </div>
+            }
+          >
+            <List.Item.Meta
+              title={item.topic}
+              description={`Тема: ${item.topic}`}
+            />
+            <div>
+              <p><strong>Вопрос:</strong> {item.description}</p>
+              {item.is_answered && item.answer && (
+                <div style={{ backgroundColor: "#f9f9f9", padding: "10px", borderRadius: "5px", marginTop: "10px" }}>
+                  <p><strong>Ответ:</strong> {item.answer}</p>
+                </div>
+              )}
+            </div>
+          </List.Item>
+        )}
+      />
+    );
   };
 
-  const handleFileChange = (info: any) => {
-    if (info.file.status === 'done') {
-      setFile(info.file.originFileObj);
+  const renderActiveRequests = () => {
+    if (activeRequests.length === 0) {
+      return <Empty description="У вас нет активных запросов" />;
     }
-  };
 
-  const handleCompleteTask = async () => {
-    if (!taskId) {
-      message.error("Задача не найдена");
-      return;
-    }
-    
-    try {
-      const completeResponse = await fetch(`${API_BASE_URL}/task/${taskId}/complete/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          variables: {
-            status: {
-              value: "completed",
-              type: "String",
-            },
-            files: {
-              value: "Uploaded",
-              type: "String",
-              valueInfo: {},
-            },
-          },
-        }),
-      });
-      const completeData = await completeResponse.json();
+    // Create steps similar to the original code
+    const studentSteps = [
+      { title: "Запрос отправлен", key: "request_sent" },
+      { title: "Загрузка документа", key: "upload_docs" },
+      { title: "Документы отправлены", key: "docs_sent" },
+      { title: "Проверка документов", key: "waiting_for_verification" },
+      { title: "Статус документов", key: "docs_status" }
+    ];
 
-      if (completeData.message === "Задача завершена!" || true) {
-        message.success("Документы успешно отправлены!");
-        
-        // Сразу переходим на шаг проверки и запускаем таймер
-        setCurrentStep(3);
-        localStorage.setItem("currentStep", "3");
-        
-        // Устанавливаем время начала проверки
-        const startTime = Date.now();
-        setVerificationStartTime(startTime);
-        localStorage.setItem("verificationStartTime", String(startTime));
-      } else {
-        message.error("Ошибка завершения задачи");
-      }
-    } catch (error) {
-      // Даже при ошибке переходим на шаг проверки
-      message.success("Документы успешно отправлены!");
-      
-      // Сразу переходим на шаг проверки и запускаем таймер
-      setCurrentStep(3);
-      localStorage.setItem("currentStep", "3");
-      
-      // Устанавливаем время начала проверки
-      const startTime = Date.now();
-      setVerificationStartTime(startTime);
-      localStorage.setItem("verificationStartTime", String(startTime));
-    }
-  };
-
-  // Инициируем периодическую проверку статуса процесса
-  useEffect(() => {
-    if (processId) {
-      fetchProcessStatus();
-      const interval = setInterval(fetchProcessStatus, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [processId, currentStep, username]);
-
-  // Получение статуса каждого шага
-  const getStepStatus = (index: number) => {
-    // Особый случай для шага статуса документов
-    if (index === 4) {
-      if (docsAccepted || docsRejected) return "finish";
-      if (currentStep >= index) return "process";
-      return "wait";
-    }
-    
-    // Обычная логика для остальных шагов
-    if (index < currentStep) return "finish";
-    if (index === currentStep) return "process";
-    return "wait";
-  };
-
-  // Получение динамического заголовка для шага статуса документов
-  const getStepTitle = (index: number, defaultTitle: string) => {
-    if (index === 4) {
-      if (docsAccepted) return "Документы приняты";
-      if (docsRejected) return "Документы отклонены";
-    }
-    return defaultTitle;
+    return (
+      <Collapse defaultActiveKey={['1']}>
+        {activeRequests.map((request, index) => (
+          <Panel header={`Запрос №${request.id}`} key={index + 1}>
+            <List
+              size="small"
+              bordered
+              dataSource={studentSteps}
+              renderItem={(step, stepIndex) => {
+                let status = "default";
+                if (stepIndex < request.currentStep) status = "success";
+                if (stepIndex === request.currentStep) status = "processing";
+                
+                // Custom title for the last step
+                let title = step.title;
+                if (stepIndex === 4) {
+                  if (request.docsAccepted) title = "Документы приняты";
+                  if (request.docsRejected) title = "Документы отклонены";
+                }
+                
+                return (
+                  <List.Item>
+                    <Tag color={
+                      status === "success" ? "green" : 
+                      status === "processing" ? "blue" :
+                      "default"
+                    }>
+                      {title}
+                    </Tag>
+                  </List.Item>
+                );
+              }}
+            />
+            
+            {request.currentStep === 4 && request.docsRejected && request.feedbackReceived && (
+              <div style={{ 
+                padding: 10, 
+                border: '1px solid #f5222d', 
+                borderRadius: 4, 
+                backgroundColor: '#fff1f0',
+                marginTop: 10
+              }}>
+                <p>Комментарий проверяющего:</p>
+                {request.feedbackReceived}
+              </div>
+            )}
+            
+            {request.currentStep < 4 && (
+              <Button
+                type="primary"
+                style={{ marginTop: 10, backgroundColor: "#002F6C" }}
+                onClick={() => window.location.href = "/student-requests"}
+              >
+                Перейти к запросу
+              </Button>
+            )}
+          </Panel>
+        ))}
+      </Collapse>
+    );
   };
 
   return (
     <Layout>
       <HeaderSession />
-      <Content style={{ padding: "20px", maxWidth: 700, margin: "auto" }}>
-        <h1>Управление документами</h1>
-        {username && <p>Студент: {username}</p>}
-        <Button
-          type="primary"
-          onClick={startNewProcess}
-          loading={loading}
-          style={{ marginBottom: 20 }}
-        >
-          Запустить новый процесс
-        </Button>
-        {processId ? (
-          <div>
-            <h3>Процесс ID: {processId}</h3>
-            <Steps current={currentStep} direction="vertical" size="small">
-              {studentSteps.map((step, index) => (
-                <Steps.Step
-                  key={index}
-                  title={getStepTitle(index, step.title)}
-                  status={getStepStatus(index)}
-                />
-              ))}
-            </Steps>
-            
-            {/* Форма загрузки документов */}
-            {currentStep === 1 && (
-              <div style={{ marginTop: 20 }}>
-                <Upload
-                  customRequest={({ file, onSuccess }) => onSuccess?.({}, file)}
-                  onChange={handleFileChange}
-                  showUploadList={true}
-                >
-                  <Button>Загрузить файл</Button>
-                </Upload>
-                <Button
-                  type="primary"
-                  onClick={handleCompleteTask}
-                  style={{ marginTop: 20 }}
-                  disabled={!file}
-                >
-                  Отправить документы
-                </Button>
+      <Content style={{ padding: "20px", maxWidth: 800, margin: "auto" }}>
+        <h1>Мои вопросы и запросы</h1>
+        {studentDetails && (
+          <Card style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div>
+                <p><strong>Студент:</strong> {studentDetails.first_name} {studentDetails.last_name}</p>
+                <p><strong>ID:</strong> {studentDetails.kbtu_id}</p>
               </div>
-            )}
-
-            {/* Отображение статуса проверки - успешно */}
-            {currentStep === 4 && docsAccepted && (
-              <div style={{ marginTop: 20 }}>
-                <h3>Процесс успешно завершен!</h3>
-                <p>Ваши документы были приняты.</p>
+              <div>
+                <p><strong>Курс:</strong> {studentDetails.course}</p>
+                <p><strong>Специальность:</strong> {studentDetails.speciality}</p>
               </div>
-            )}
-            
-            {/* Отображение статуса проверки - отклонено */}
-            {currentStep === 4 && docsRejected && (
-              <div style={{ marginTop: 20 }}>
-                <h3>Документы отклонены</h3>
-                {feedbackReceived ? (
-                  <div>
-                    <p>Получен комментарий от проверяющего:</p>
-                    <div style={{ 
-                      padding: 10, 
-                      border: '1px solid #f5222d', 
-                      borderRadius: 4, 
-                      backgroundColor: '#fff1f0' 
-                    }}>
-                      {feedbackReceived}
-                    </div>
-                    <Button
-                      type="primary"
-                      onClick={startNewProcess}
-                      style={{ marginTop: 20 }}
-                    >
-                      Начать новый процесс
-                    </Button>
-                  </div>
-                ) : (
-                  <p>Ожидается отзыв от проверяющего...</p>
-                )}
-              </div>
-            )}
-            
-            {/* Отображение статуса ожидания проверки */}
-            {currentStep === 3 && (
-              <div style={{ marginTop: 20 }}>
-                <p>Ваши документы на проверке. Автоматическое одобрение через:</p>
-                {verificationStartTime && (
-                  <p style={{ fontSize: '18px', fontWeight: 'bold' }}>
-                    {Math.max(
-                      0, 
-                      Math.ceil((30000 - (Date.now() - verificationStartTime)) / 1000)
-                    )}{" "}
-                    секунд
-                  </p>
-                )}
-              </div>
-            )}
-            
-            {/* Отображение статуса отправки */}
-            {currentStep === 2 && (
-              <div style={{ marginTop: 20 }}>
-                <p>Документы успешно отправлены. Ожидается назначение проверяющего...</p>
-              </div>
-            )}
-          </div>
-        ) : (
-          <p>Нет активных процессов. Нажмите "Запустить новый процесс", чтобы начать.</p>
+            </div>
+          </Card>
         )}
+
+        <div style={{ display: "flex", gap: "20px" }}>
+          <Card title="Мои вопросы" style={{ flex: 1 }}>
+            {renderQuestionsList()}
+          </Card>
+
+          <div style={{ flex: 1 }}>
+            <Card title="Доступные запросы" style={{ marginBottom: "20px" }}>
+              <List
+                itemLayout="horizontal"
+                dataSource={requestTypes}
+                renderItem={item => (
+                  <List.Item
+                    actions={[
+                      <Button 
+                        key="start" 
+                        type="primary" 
+                        size="small" 
+                        onClick={() => startNewProcess(item.id)}
+                        loading={loading}
+                        style={{ backgroundColor: "#002F6C" }}
+                      >
+                        Запустить процесс
+                      </Button>
+                    ]}
+                  >
+                    <List.Item.Meta
+                      title={item.name}
+                      description={item.description}
+                    />
+                  </List.Item>
+                )}
+              />
+            </Card>
+
+            <Card title="Мои активные запросы">
+              {renderActiveRequests()}
+            </Card>
+          </div>
+        </div>
       </Content>
       <Footer />
     </Layout>
