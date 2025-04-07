@@ -370,14 +370,11 @@ export default function StudentRequests() {
             {/* Отображение статуса ожидания проверки */}
             {currentStep === 3 && (
               <div style={{ marginTop: 20 }}>
-                <p>Ваши документы на проверке. Автоматическое одобрение через:</p>
+                <p>Ваши документы на проверке.</p>
                 {verificationStartTime && (
                   <p style={{ fontSize: '18px', fontWeight: 'bold' }}>
-                    {Math.max(
-                      0, 
-                      Math.ceil((30000 - (Date.now() - verificationStartTime)) / 1000)
-                    )}{" "}
-                    секунд
+
+                    {/* секунд */}
                   </p>
                 )}
               </div>
