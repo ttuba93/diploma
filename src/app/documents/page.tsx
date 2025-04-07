@@ -465,7 +465,6 @@ export default function DocumentsPage() {
           open={showFilledDocument}
           onCancel={handleFilledDocCancel}
           width={800}
-          height={200}
           footer={[
             <Button 
               key="download" 
@@ -485,7 +484,7 @@ export default function DocumentsPage() {
             <iframe
               src={filledDocumentUrl}
               width="100%"
-              height="600px"
+              height="100px"
               title="Filled Document"
               style={{ border: "none" }}
             ></iframe>
