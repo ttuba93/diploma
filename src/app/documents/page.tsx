@@ -434,7 +434,7 @@ export default function DocumentsPage() {
           title={`Fill ${selectedDocument?.name}`}
           open={isFormModalVisible}
           onCancel={handleFormCancel}
-          width={300}
+          width={600}
           footer={null}
         >
           <Form
@@ -467,7 +467,7 @@ export default function DocumentsPage() {
           title="Your Filled Document"
           open={showFilledDocument}
           onCancel={handleFilledDocCancel}
-          width={400}
+          width={800}
           footer={[
             <Button 
               key="download" 
@@ -494,7 +494,7 @@ export default function DocumentsPage() {
               <img 
                 src={filledImage} 
                 alt="Filled Document"
-                style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain' }}
+                style={{ maxWidth: '100%', maxHeight: '100vh', objectFit: 'contain' }}
               />
             </div>
           )}
