@@ -37,6 +37,12 @@ interface ActiveRequest {
   feedbackReceived: string | null;
 }
 
+interface RequestType {
+  id: string;
+  name: string;
+  description: string;
+}
+
 export default function StudentFaqRequests() {
   const [loading, setLoading] = useState<boolean>(false);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -44,6 +50,12 @@ export default function StudentFaqRequests() {
   const [username, setUsername] = useState<string>("");
   const [studentId, setStudentId] = useState<string>("");
   const [studentDetails, setStudentDetails] = useState<Student | null>(null);
+  const [requestTypes, setRequestTypes] = useState<RequestType[]>([
+    { id: "transcript", name: "Транскрипт", description: "Запрос на получение транскрипта" },
+    { id: "certificate", name: "Справка с места учебы", description: "Запрос на получение справки с места учебы" },
+    { id: "schedule", name: "Расписание занятий", description: "Запрос на получение расписания занятий" },
+    { id: "military", name: "Справка для военкомата", description: "Запрос на получение справки для военкомата" }
+  ]);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -123,16 +135,38 @@ export default function StudentFaqRequests() {
     }
   };
 
-  const handleNewQuestion = () => {
-    // Redirect to a new question form or open a modal
-    message.info("Здесь будет форма для нового вопроса");
-  };
-
-  const startNewProcess = () => {
-    // Reuse the logic from the original code
-    message.info("Перенаправление на страницу создания нового запроса");
-    // Redirect to the StudentRequests page or open the process in a modal
-    window.location.href = "/student-requests";
+  const startNewProcess = async (requestTypeId: string) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/start-process/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          student_id: studentId || "12345", 
+          initiator: username,
+          request_type: requestTypeId
+        }),
+      });
+      const data = await response.json();
+      
+      if (data.processInstanceId) {
+        message.success("Процесс запущен!");
+        localStorage.setItem("processId", data.processInstanceId);
+        localStorage.setItem("currentStep", "1");
+        localStorage.removeItem("docsAccepted");
+        localStorage.removeItem("docsRejected");
+        localStorage.removeItem("feedbackReceived");
+        localStorage.removeItem("verificationStartTime");
+        
+        // Redirect to the student requests page
+        window.location.href = "/student-requests";
+      } else {
+        message.error("Ошибка запуска процесса");
+      }
+    } catch (error) {
+      message.error("Ошибка подключения к серверу");
+    }
+    setLoading(false);
   };
 
   const renderQuestionsList = () => {
@@ -258,25 +292,7 @@ export default function StudentFaqRequests() {
     <Layout>
       <HeaderSession />
       <Content style={{ padding: "20px", maxWidth: 800, margin: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <h1>Мои вопросы и запросы</h1>
-          <div>
-            <Button 
-              type="primary" 
-              onClick={handleNewQuestion}
-              style={{ marginRight: 10, backgroundColor: "#002F6C" }}
-            >
-              Задать вопрос
-            </Button>
-            <Button 
-              type="primary" 
-              onClick={startNewProcess}
-              style={{ backgroundColor: "#002F6C" }}
-            >
-              Новый запрос документов
-            </Button>
-          </div>
-        </div>
+        <h1>Мои вопросы и запросы</h1>
 
         {studentDetails && (
           <Card style={{ marginBottom: 20 }}>
@@ -293,13 +309,45 @@ export default function StudentFaqRequests() {
           </Card>
         )}
 
-        <Card title="Мои вопросы" style={{ marginBottom: 20 }}>
-          {renderQuestionsList()}
-        </Card>
+        <div style={{ display: "flex", gap: "20px" }}>
+          <Card title="Мои вопросы" style={{ flex: 1 }}>
+            {renderQuestionsList()}
+          </Card>
 
-        <Card title="Мои запросы документов">
-          {renderActiveRequests()}
-        </Card>
+          <div style={{ flex: 1 }}>
+            <Card title="Доступные запросы" style={{ marginBottom: "20px" }}>
+              <List
+                itemLayout="horizontal"
+                dataSource={requestTypes}
+                renderItem={item => (
+                  <List.Item
+                    actions={[
+                      <Button 
+                        key="start" 
+                        type="primary" 
+                        size="small" 
+                        onClick={() => startNewProcess(item.id)}
+                        loading={loading}
+                        style={{ backgroundColor: "#002F6C" }}
+                      >
+                        Запустить процесс
+                      </Button>
+                    ]}
+                  >
+                    <List.Item.Meta
+                      title={item.name}
+                      description={item.description}
+                    />
+                  </List.Item>
+                )}
+              />
+            </Card>
+
+            <Card title="Мои активные запросы">
+              {renderActiveRequests()}
+            </Card>
+          </div>
+        </div>
       </Content>
       <Footer />
     </Layout>
